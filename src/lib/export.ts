@@ -94,6 +94,14 @@ export function exportCSV(rows: SheetRow[]): void {
   URL.revokeObjectURL(url);
 }
 
+/** Sort เลขทะเบียนคุม numerically (e.g. P69-0002 < P69-0010), not lexically. */
+function compareRegNo(a: string, b: string): number {
+  const na = Number(a.match(/(\d+)\s*$/)?.[1]);
+  const nb = Number(b.match(/(\d+)\s*$/)?.[1]);
+  if (Number.isFinite(na) && Number.isFinite(nb) && na !== nb) return na - nb;
+  return a.localeCompare(b, "th");
+}
+
 /** Wrap a long string onto multiple lines, breaking only at the "  ·  " separators. */
 function wrapFilters(text: string, maxChars: number): string[] {
   const parts = text.split("  ·  ");
@@ -132,7 +140,8 @@ export async function exportPDF(
   const pageW = doc.internal.pageSize.getWidth();
   const pageH = doc.internal.pageSize.getHeight();
   const margin = 14;
-  const sorted = [...rows].sort((a, b) => b.price - a.price);
+  // ordered by เลขทะเบียนคุม from lowest to highest
+  const sorted = [...rows].sort((a, b) => compareRegNo(a.regNo, b.regNo));
   const shown = sorted.slice(0, MAX_PDF_ROWS);
 
   // header band
