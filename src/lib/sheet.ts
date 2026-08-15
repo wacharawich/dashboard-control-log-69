@@ -15,7 +15,8 @@ export type FilterKey =
   | "type"
   | "planType";
 
-export type Filters = Partial<Record<FilterKey, string>>;
+// multiple values can be selected per dimension (empty array = no filter)
+export type Filters = Partial<Record<FilterKey, string[]>>;
 
 export interface Dimension {
   key: FilterKey;
@@ -51,8 +52,8 @@ export function filterRows(
   return rows.filter((row) =>
     keys.every((key) => {
       if (key === excludeKey) return true;
-      const value = filters[key];
-      return value === undefined || value === "" || row[key] === value;
+      const values = filters[key];
+      return !values || values.length === 0 || values.includes(row[key]);
     }),
   );
 }

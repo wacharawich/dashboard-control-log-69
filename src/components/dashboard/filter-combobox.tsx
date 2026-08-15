@@ -20,9 +20,9 @@ import { fmtNum } from "@/lib/sheet";
 
 interface Props {
   dim: Dimension;
-  value: string;
+  value: string[];
   options: Option[];
-  onChange: (value: string) => void;
+  onChange: (value: string[]) => void;
 }
 
 export function FilterCombobox({ dim, value, options, onChange }: Props) {
@@ -35,7 +35,22 @@ export function FilterCombobox({ dim, value, options, onChange }: Props) {
     return options.filter((o) => o.value.toLowerCase().includes(q));
   }, [options, query]);
 
-  const active = value !== "";
+  const active = value.length > 0;
+  const selectedSet = useMemo(() => new Set(value), [value]);
+
+  const toggle = (optionValue: string) => {
+    onChange(
+      selectedSet.has(optionValue)
+        ? value.filter((v) => v !== optionValue)
+        : [...value, optionValue],
+    );
+  };
+
+  const triggerLabel = !active
+    ? "ทั้งหมด"
+    : value.length <= 2
+      ? value.join(" · ")
+      : `${value.length} รายการ`;
 
   return (
     <div className="min-w-0">
@@ -61,8 +76,13 @@ export function FilterCombobox({ dim, value, options, onChange }: Props) {
                 : "text-muted-foreground hover:text-foreground",
             )}
           >
-            <span className="truncate text-left text-[13px]">
-              {active ? value : "ทั้งหมด"}
+            <span className="flex min-w-0 flex-1 items-center gap-1.5">
+              <span className="truncate text-left text-[13px]">{triggerLabel}</span>
+              {active && value.length > 1 && (
+                <span className="shrink-0 rounded-sm bg-primary/10 px-1 font-mono text-[10px] font-semibold text-primary">
+                  {value.length}
+                </span>
+              )}
             </span>
             {active ? (
               <span
@@ -71,12 +91,12 @@ export function FilterCombobox({ dim, value, options, onChange }: Props) {
                 className="rounded-sm p-0.5 hover:bg-primary/10"
                 onClick={(e) => {
                   e.stopPropagation();
-                  onChange("");
+                  onChange([]);
                 }}
                 onKeyDown={(e) => {
                   if (e.key === "Enter" || e.key === "Backspace") {
                     e.stopPropagation();
-                    onChange("");
+                    onChange([]);
                   }
                 }}
               >
@@ -103,43 +123,50 @@ export function FilterCombobox({ dim, value, options, onChange }: Props) {
               <CommandGroup>
                 <CommandItem
                   value="__all__"
-                  onSelect={() => {
-                    onChange("");
-                    setOpen(false);
-                  }}
+                  onSelect={() => onChange([])}
                   className="cursor-pointer aria-selected:bg-accent"
                 >
-                  <span className={cn("mr-2", active ? "opacity-0" : "opacity-100")}>
+                  <span className={cn("mr-2", !active ? "opacity-100" : "opacity-0")}>
                     <Check className="size-3.5 text-primary" />
                   </span>
                   <span className="text-[13px]">ทั้งหมด ({fmtNum(options.length)} ค่า)</span>
+                  {active && (
+                    <span className="ml-auto font-mono text-[10px] text-primary">
+                      ล้าง
+                    </span>
+                  )}
                 </CommandItem>
-                {filtered.map((option) => (
-                  <CommandItem
-                    key={option.value}
-                    value={option.value}
-                    onSelect={() => {
-                      onChange(option.value);
-                      setOpen(false);
-                    }}
-                    className="cursor-pointer aria-selected:bg-accent"
-                  >
-                    <span
-                      className={cn(
-                        "mr-2",
-                        value === option.value ? "opacity-100" : "opacity-0",
-                      )}
+                {filtered.map((option) => {
+                  const selected = selectedSet.has(option.value);
+                  return (
+                    <CommandItem
+                      key={option.value}
+                      value={option.value}
+                      onSelect={() => toggle(option.value)}
+                      className="cursor-pointer aria-selected:bg-accent"
                     >
-                      <Check className="size-3.5 text-primary" />
-                    </span>
-                    <span className="flex-1 truncate text-[13px]">{option.value}</span>
-                    <span className="ml-2 shrink-0 font-mono text-[10px] text-muted-foreground">
-                      {fmtNum(option.count)}
-                    </span>
-                  </CommandItem>
-                ))}
+                      <span
+                        className={cn(
+                          "flex size-4 shrink-0 items-center justify-center rounded-sm border",
+                          selected
+                            ? "border-primary bg-primary text-primary-foreground"
+                            : "border-input bg-background",
+                        )}
+                      >
+                        {selected && <Check className="size-3" />}
+                      </span>
+                      <span className="flex-1 truncate text-[13px]">{option.value}</span>
+                      <span className="ml-2 shrink-0 font-mono text-[10px] text-muted-foreground">
+                        {fmtNum(option.count)}
+                      </span>
+                    </CommandItem>
+                  );
+                })}
               </CommandGroup>
             </CommandList>
+            <div className="border-t border-border/60 px-3 py-2 text-center font-mono text-[10px] text-muted-foreground">
+              เลือกได้หลายค่า · คลิกเพื่อเลือก/ยกเลิก
+            </div>
           </Command>
         </PopoverContent>
       </Popover>

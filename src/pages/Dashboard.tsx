@@ -88,13 +88,26 @@ export default function Dashboard() {
     );
   }, [filtered]);
 
-  const activeEntries = (Object.entries(filters) as [FilterKey, string][]).filter(
-    ([, value]) => value !== "" && value !== undefined,
+  const activeEntries = (Object.entries(filters) as [FilterKey, string[]][]).filter(
+    ([, values]) => values && values.length > 0,
   );
   const activeCount = activeEntries.length;
 
-  const setFilter = (key: FilterKey, value: string) =>
-    setFilters((prev) => ({ ...prev, [key]: value }));
+  const setFilter = (key: FilterKey, value: string[]) =>
+    setFilters((prev) => {
+      const next = { ...prev };
+      if (value.length === 0) delete next[key];
+      else next[key] = value;
+      return next;
+    });
+  const removeFilterValue = (key: FilterKey, value: string) =>
+    setFilters((prev) => {
+      const next = { ...prev };
+      const rest = (next[key] ?? []).filter((v) => v !== value);
+      if (rest.length === 0) delete next[key];
+      else next[key] = rest;
+      return next;
+    });
   const resetFilters = () => setFilters({});
 
   const handleExport = async (format: "csv" | "pdf") => {
@@ -235,7 +248,7 @@ export default function Dashboard() {
               <FilterCombobox
                 key={dim.key}
                 dim={dim}
-                value={filters[dim.key] ?? ""}
+                value={filters[dim.key] ?? []}
                 options={optionLists[dim.key]}
                 onChange={(v) => setFilter(dim.key, v)}
               />
@@ -246,20 +259,22 @@ export default function Dashboard() {
             <span className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
               active <span className={activeCount > 0 ? "text-primary" : ""}>{activeCount}</span>/9
             </span>
-            {activeEntries.map(([key, value]) => (
-              <button
-                key={key}
-                type="button"
-                onClick={() => setFilter(key, "")}
-                className="group flex items-center gap-1.5 rounded-sm border border-primary/30 bg-primary/5 px-2 py-1 text-[11.5px] text-primary transition-colors hover:bg-primary/10"
-              >
-                <span className="font-mono text-[9px] font-semibold tracking-wider">
-                  {DIMENSION_MAP[key].code}
-                </span>
-                <span className="max-w-[180px] truncate">{value}</span>
-                <X className="size-3 opacity-60 group-hover:opacity-100" />
-              </button>
-            ))}
+            {activeEntries.map(([key, values]) =>
+              values.map((value) => (
+                <button
+                  key={`${key}:${value}`}
+                  type="button"
+                  onClick={() => removeFilterValue(key, value)}
+                  className="group flex items-center gap-1.5 rounded-sm border border-primary/30 bg-primary/5 px-2 py-1 text-[11.5px] text-primary transition-colors hover:bg-primary/10"
+                >
+                  <span className="font-mono text-[9px] font-semibold tracking-wider">
+                    {DIMENSION_MAP[key].code}
+                  </span>
+                  <span className="max-w-[180px] truncate">{value}</span>
+                  <X className="size-3 opacity-60 group-hover:opacity-100" />
+                </button>
+              )),
+            )}
             {activeCount > 0 && (
               <Button
                 variant="ghost"

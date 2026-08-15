@@ -164,8 +164,8 @@ export async function exportPDF(
   // summary — single compact row (landscape has room for everything on one line)
   doc.setTextColor(38, 60, 49);
   doc.setFontSize(9);
-  const activeFilters = (Object.entries(ctx.filters) as [keyof Filters, string][]).filter(
-    ([, value]) => value !== "" && value !== undefined,
+  const activeFilters = (Object.entries(ctx.filters) as [keyof Filters, string[]][]).filter(
+    ([, values]) => values && values.length > 0,
   );
   doc.text(
     `ยอดรวม: ${fmtBaht(ctx.total)}  ·  รายการ: ${fmtNum(rows.length)}  ·  หน่วยงาน: ${fmtNum(ctx.agencyCount)}  ·  แสดง: ${fmtNum(shown.length)} แถว${rows.length > MAX_PDF_ROWS ? ` จาก ${fmtNum(rows.length)}` : ""}`,
@@ -177,7 +177,7 @@ export async function exportPDF(
   let tableStart = 38;
   if (activeFilters.length > 0) {
     const filterText = activeFilters
-      .map(([key, value]) => `${DIMENSION_MAP[key].code}: ${value}`)
+      .map(([key, values]) => `${DIMENSION_MAP[key].code}: ${values.join(", ")}`)
       .join("  ·  ");
     const maxChars = Math.floor((pageW - margin * 2) / 3.1);
     const lines = wrapFilters(`ตัวกรอง: ${filterText}`, maxChars);
