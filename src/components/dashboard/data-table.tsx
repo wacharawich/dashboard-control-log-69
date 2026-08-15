@@ -39,6 +39,7 @@ const COLUMNS = [
   { key: "item", label: "รายการ" },
   { key: "category", label: "หมวด" },
   { key: "type", label: "ประเภท" },
+  { key: "planType", label: "ประเภทแผน" },
   { key: "price", label: "ราคาเสนอ" },
 ] as const;
 
@@ -102,7 +103,7 @@ export function DataTable({ rows }: { rows: SheetRow[] }) {
       </div>
 
       <div className="overflow-x-auto rounded-md border border-border bg-card">
-        <Table className="min-w-[1080px]">
+        <Table className="min-w-[1160px]">
           <TableHeader>
             <TableRow className="border-border/70 hover:bg-transparent">
               {COLUMNS.map((col) => (
@@ -148,6 +149,9 @@ export function DataTable({ rows }: { rows: SheetRow[] }) {
                   </TableCell>
                   <TableCell className="max-w-[150px] truncate text-[12px]" title={row.type}>
                     {row.type}
+                  </TableCell>
+                  <TableCell className="whitespace-nowrap text-[12px]">
+                    {row.planType || "—"}
                   </TableCell>
                   <TableCell className="whitespace-nowrap text-right font-mono text-[12px] font-medium tabular-nums text-primary">
                     {fmtBaht(row.price)}

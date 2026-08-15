@@ -16,7 +16,7 @@ export const roleValidator = v.union(
 );
 export type Role = Infer<typeof roleValidator>;
 
-// one row from the Google Sheet: เลขทะเบียนคุม / เดือน / กลุ่มภารกิจ / กลุ่มงาน / หน่วยงาน / รายการ / หมวด / ประเภท / ราคาเสนอ
+// one row from the Google Sheet: เลขทะเบียนคุม / เดือน / กลุ่มภารกิจ / กลุ่มงาน / หน่วยงาน / รายการ / หมวด / ประเภท / ราคาเสนอ / ประเภทแผน
 export const sheetRowValidator = v.object({
   regNo: v.string(), // เลขทะเบียนคุม (column A)
   date: v.string(), // เดือน raw value, e.g. "19 ก.ย. 2025" (column B)
@@ -29,6 +29,7 @@ export const sheetRowValidator = v.object({
   category: v.string(), // หมวด (column G)
   type: v.string(), // ประเภท (column H)
   price: v.number(), // ราคาเสนอ (column I)
+  planType: v.string(), // ประเภทแผน (column J)
 });
 
 const schema = defineSchema(

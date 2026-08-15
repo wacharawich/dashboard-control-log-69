@@ -63,8 +63,8 @@ export default function Landing() {
               <span className="text-primary">ราคาเสนอ</span> ในโหมดเทอร์มินัล
             </h1>
             <p className="mt-5 max-w-md text-[14.5px] leading-relaxed text-muted-foreground">
-              แดชบอร์ดข้อมูลราคาเสนอจาก Google Sheets — กรองได้ 8 มิติ ตั้งแต่เลขทะเบียนคุม
-              ไปจนถึงหมวดและประเภท พร้อมกราฟที่อัปเดตทันทีเมื่อเลือกข้อมูล
+              แดชบอร์ดข้อมูลราคาเสนอจาก Google Sheets — กรองได้ 9 มิติ ตั้งแต่เลขทะเบียนคุม
+              ไปจนถึงหมวด ประเภท และประเภทแผน พร้อมกราฟที่อัปเดตทันทีเมื่อเลือกข้อมูล
             </p>
             <div className="mt-7 flex flex-wrap items-center gap-3">
               <Button size="lg" className="gap-2 px-6" asChild>
@@ -110,7 +110,7 @@ export default function Landing() {
 
       {/* dimensions */}
       <section className="mx-auto max-w-6xl px-4 pb-14 sm:px-6">
-        <SectionLabel index="01" code="DIMENSIONS" title="โหมดวิเคราะห์ 8 มิติ" />
+        <SectionLabel index="01" code="DIMENSIONS" title="โหมดวิเคราะห์ 9 มิติ" />
         <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           {DIMENSIONS.map((dim, i) => (
             <motion.div
@@ -153,13 +153,13 @@ export default function Landing() {
             },
             {
               n: "02",
-              cmd: "$ parse 9 columns",
+              cmd: "$ parse 10 columns",
               title: "แปลงเป็นชุดข้อมูล",
-              desc: "จับคู่คอลัมน์ A–I ให้เป็นโครงสร้างสำหรับวิเคราะห์ พร้อมทำความสะอาดราคาเสนอ",
+              desc: "จับคู่คอลัมน์ A–J ให้เป็นโครงสร้างสำหรับวิเคราะห์ พร้อมทำความสะอาดราคาเสนอ",
             },
             {
               n: "03",
-              cmd: "$ filter --dim 8",
+              cmd: "$ filter --dim 9",
               title: "กรองและดูกราฟแบบสด",
               desc: "เลือกตัวกรองด้านบน ข้อมูล กราฟ และตารางด้านล่างจะอัปเดตอัตโนมัติทันที",
             },
@@ -262,7 +262,7 @@ function TerminalMock({ rows }: { rows: SheetRow[] }) {
         </p>
         <p className="text-muted-foreground">
           {"  → "}
-          {rows.length > 0 ? `${fmtNum(rows.length)} rows` : "fetching…"} · 9 cols · parse ok
+          {rows.length > 0 ? `${fmtNum(rows.length)} rows` : "fetching…"} · 10 cols · parse ok
         </p>
         <p>
           <span className="text-primary">$</span> group by เดือน{" "}

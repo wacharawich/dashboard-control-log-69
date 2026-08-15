@@ -108,6 +108,7 @@ function toRow(cells: string[]): SheetRow | null {
     category: c[6],
     type: c[7],
     price,
+    planType: c[9] ?? "", // ประเภทแผน (column J)
   };
 }
 

@@ -145,7 +145,7 @@ export default function Dashboard() {
 
           <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-border/60 pt-3">
             <span className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
-              active <span className={activeCount > 0 ? "text-primary" : ""}>{activeCount}</span>/8
+              active <span className={activeCount > 0 ? "text-primary" : ""}>{activeCount}</span>/9
             </span>
             {activeEntries.map(([key, value]) => (
               <button

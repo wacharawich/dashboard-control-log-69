@@ -3,7 +3,7 @@ import type { Doc } from "@/convex/_generated/dataModel";
 // Re-export the row shape coming from Convex codegen (sheetRowValidator)
 export type SheetRow = Doc<"sheetChunk">["rows"][number];
 
-/** The 8 filterable/groupable dimensions from the sheet columns. */
+/** The filterable/groupable dimensions from the sheet columns. */
 export type FilterKey =
   | "regNo"
   | "monthKey"
@@ -12,7 +12,8 @@ export type FilterKey =
   | "agency"
   | "item"
   | "category"
-  | "type";
+  | "type"
+  | "planType";
 
 export type Filters = Partial<Record<FilterKey, string>>;
 
@@ -32,6 +33,7 @@ export const DIMENSIONS: Dimension[] = [
   { key: "item", label: "รายการ", code: "ITM", desc: "จำแนกตามรายการพัสดุ/บริการ" },
   { key: "category", label: "หมวด", code: "CAT", desc: "จำแนกตามหมวดรายจ่าย" },
   { key: "type", label: "ประเภท", code: "TYP", desc: "จำแนกตามประเภทรายจ่าย" },
+  { key: "planType", label: "ประเภทแผน", code: "PLN", desc: "จำแนกตามประเภทแผน (ในแผน/นอกแผน/ทดแทน)" },
 ];
 
 export const DIMENSION_MAP: Record<FilterKey, Dimension> = Object.fromEntries(
