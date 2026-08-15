@@ -1,9 +1,16 @@
-import { FilterCombobox } from "@/components/dashboard/filter-combobox";
 import { DataTable } from "@/components/dashboard/data-table";
+import { FilterCombobox } from "@/components/dashboard/filter-combobox";
 import { AgencyBars, PriceBars, ShareDonut } from "@/components/dashboard/terminal-charts";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { useSheetData } from "@/hooks/use-sheet-data";
+import { exportCSV, exportPDF } from "@/lib/export";
 import {
   DIMENSIONS,
   DIMENSION_MAP,
@@ -17,19 +24,29 @@ import {
   uniqueValues,
   type FilterKey,
   type Filters,
+  type Group,
   type Option,
 } from "@/lib/sheet";
 import { cn } from "@/lib/utils";
 import { motion } from "framer-motion";
-import { AlertTriangle, RefreshCw, X } from "lucide-react";
+import { AlertTriangle, ChevronDown, Download, FileDown, FileText, RefreshCw, X } from "lucide-react";
 import { useMemo, useState } from "react";
 
 const SHEET_REF = "sheet://1UtSyr…NRxcw";
+
+const PLAN_ORDER = ["ในแผน", "นอกแผน", "ทดแทน"] as const;
+const PLAN_COLORS: Record<string, string> = {
+  "ในแผน": "#2f6f4f",
+  "นอกแผน": "#a16207",
+  "ทดแทน": "#7a8a7f",
+};
 
 export default function Dashboard() {
   const { rows, meta, syncing, error, loaded, sync } = useSheetData();
   const [filters, setFilters] = useState<Filters>({});
   const [groupBy, setGroupBy] = useState<FilterKey>("monthKey");
+  const [exporting, setExporting] = useState<"csv" | "pdf" | null>(null);
+  const [exportError, setExportError] = useState<string | null>(null);
 
   const optionLists = useMemo(() => {
     const lists = {} as Record<FilterKey, Option[]>;
@@ -60,9 +77,16 @@ export default function Dashboard() {
     [filtered],
   );
   const agencyGroups = useMemo(
-    () => groupBySum(filtered, "agency").slice(0, 8),
+    () => groupBySum(filtered, "agency").slice(0, 10),
     [filtered],
   );
+
+  const planTypeStats = useMemo(() => {
+    const byName = new Map(groupBySum(filtered, "planType").map((g) => [g.name, g]));
+    return PLAN_ORDER.map(
+      (name) => byName.get(name) ?? { name, sum: 0, count: 0 },
+    );
+  }, [filtered]);
 
   const activeEntries = (Object.entries(filters) as [FilterKey, string][]).filter(
     ([, value]) => value !== "" && value !== undefined,
@@ -72,6 +96,24 @@ export default function Dashboard() {
   const setFilter = (key: FilterKey, value: string) =>
     setFilters((prev) => ({ ...prev, [key]: value }));
   const resetFilters = () => setFilters({});
+
+  const handleExport = async (format: "csv" | "pdf") => {
+    setExporting(format);
+    setExportError(null);
+    try {
+      if (format === "csv") {
+        exportCSV(filtered);
+      } else {
+        await exportPDF(filtered, { total, agencyCount, filters });
+      }
+    } catch (e) {
+      setExportError(
+        e instanceof Error ? e.message : "เกิดข้อผิดพลาดระหว่างการสร้างไฟล์",
+      );
+    } finally {
+      setExporting(null);
+    }
+  };
 
   const groupDim = DIMENSION_MAP[groupBy];
 
@@ -96,6 +138,48 @@ export default function Dashboard() {
 
           <div className="flex items-center gap-3">
             <StatusPill syncing={syncing} error={error} loaded={loaded} rowCount={rows.length} syncedAt={meta?.syncedAt ?? null} />
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-8 gap-1.5 text-[12px]"
+                  disabled={exporting !== null || filtered.length === 0}
+                >
+                  <Download className="size-3.5" />
+                  {exporting ? "กำลังสร้าง…" : "Export"}
+                  <ChevronDown className="size-3 opacity-60" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-60">
+                <DropdownMenuItem
+                  disabled={exporting !== null}
+                  onSelect={() => void handleExport("csv")}
+                  className="gap-2.5 py-2.5"
+                >
+                  <FileDown className="size-4 text-primary" />
+                  <div className="flex flex-col">
+                    <span className="text-[13px]">Export CSV</span>
+                    <span className="font-mono text-[10px] text-muted-foreground">
+                      ทุกแถวที่ถูกกรอง ({fmtNum(filtered.length)})
+                    </span>
+                  </div>
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  disabled={exporting !== null}
+                  onSelect={() => void handleExport("pdf")}
+                  className="gap-2.5 py-2.5"
+                >
+                  <FileText className="size-4 text-primary" />
+                  <div className="flex flex-col">
+                    <span className="text-[13px]">Export PDF</span>
+                    <span className="font-mono text-[10px] text-muted-foreground">
+                      รายงาน A4 · แสดงสูงสุด 400 แถวแรก
+                    </span>
+                  </div>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
             <Button
               variant="outline"
               size="sm"
@@ -120,6 +204,21 @@ export default function Dashboard() {
             <Button variant="outline" size="sm" className="h-7 text-[12px]" onClick={() => void sync(true)}>
               ลองอีกครั้ง
             </Button>
+          </div>
+        )}
+
+        {exportError && (
+          <div className="flex items-center gap-3 rounded-md border border-amber-600/40 bg-amber-500/10 px-4 py-3 text-[13px] text-amber-900">
+            <AlertTriangle className="size-4 shrink-0 text-amber-700" />
+            <span className="flex-1">Export ล้มเหลว — {exportError}</span>
+            <button
+              type="button"
+              onClick={() => setExportError(null)}
+              className="rounded-sm p-1 text-amber-800 transition-colors hover:bg-amber-500/20"
+              aria-label="ปิด"
+            >
+              <X className="size-4" />
+            </button>
           </div>
         )}
 
@@ -261,7 +360,7 @@ export default function Dashboard() {
           >
             <Card className="h-full gap-0 border-border/80 py-5 shadow-none">
               <CardHeader className="px-5">
-                <CardTitle className="text-[15px] font-medium">TOP 8 หน่วยงาน</CardTitle>
+                <CardTitle className="text-[15px] font-medium">TOP 10 หน่วยงาน</CardTitle>
                 <p className="mt-1 font-mono text-[11px] text-muted-foreground">
                   group by AGT · sum ราคาเสนอ
                 </p>
@@ -272,6 +371,25 @@ export default function Dashboard() {
                 ) : (
                   <AgencyBars groups={agencyGroups} />
                 )}
+              </CardContent>
+            </Card>
+          </motion.div>
+
+          <motion.div
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.35, delay: 0.2 }}
+            className="lg:col-span-5"
+          >
+            <Card className="h-full gap-0 border-border/80 py-5 shadow-none">
+              <CardHeader className="px-5">
+                <CardTitle className="text-[15px] font-medium">สถิติแยกตามประเภทแผน</CardTitle>
+                <p className="mt-1 font-mono text-[11px] text-muted-foreground">
+                  group by PLN · ในแผน / นอกแผน / ทดแทน · sum ราคาเสนอ
+                </p>
+              </CardHeader>
+              <CardContent className="px-5">
+                <PlanTypeBreakdown stats={planTypeStats} total={total} />
               </CardContent>
             </Card>
           </motion.div>
@@ -362,6 +480,41 @@ function KpiCard({
         {value}
       </p>
       <p className="mt-1 truncate text-[11px] text-muted-foreground">{caption}</p>
+    </div>
+  );
+}
+
+function PlanTypeBreakdown({ stats, total }: { stats: Group[]; total: number }) {
+  const max = Math.max(1, ...stats.map((s) => s.sum));
+  return (
+    <div className="grid gap-3 sm:grid-cols-3">
+      {stats.map((s) => {
+        const share = total > 0 ? (s.sum / total) * 100 : 0;
+        const color = PLAN_COLORS[s.name] ?? "#8bbd9d";
+        return (
+          <div key={s.name} className="rounded-md border border-border/80 bg-background/60 p-4">
+            <div className="flex items-center gap-2">
+              <span className="size-2 shrink-0 rounded-full" style={{ backgroundColor: color }} />
+              <p className="text-[13px] font-medium">{s.name}</p>
+            </div>
+            <p className="mt-3 truncate font-mono text-[20px] font-semibold tabular-nums text-foreground">
+              {fmtBaht(s.sum)}
+            </p>
+            <p className="mt-1 font-mono text-[10.5px] text-muted-foreground">
+              {fmtNum(s.count)} รายการ · {share.toFixed(1)}% ของยอดรวม
+            </p>
+            <div className="mt-3 h-1.5 w-full overflow-hidden rounded-full bg-muted">
+              <div
+                className="h-full rounded-full transition-all duration-500"
+                style={{
+                  width: `${Math.max(2, (s.sum / max) * 100)}%`,
+                  backgroundColor: color,
+                }}
+              />
+            </div>
+          </div>
+        );
+      })}
     </div>
   );
 }
