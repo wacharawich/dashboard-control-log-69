@@ -50,7 +50,7 @@ async function fetchFontBase64(): Promise<string> {
 
 function csvField(value: string | number): string {
   const s = String(value);
-  return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+  return /[\",\n]/.test(s) ? `"${s.replace(/\"/g, '"\"')}"` : s;
 }
 
 function dateStamp(): string {
@@ -94,7 +94,28 @@ export function exportCSV(rows: SheetRow[]): void {
   URL.revokeObjectURL(url);
 }
 
-/** Generate a paginated A4 PDF report of the filtered rows (Prompt font embedded). */
+/** Wrap a long string onto multiple lines, breaking only at the "  ·  " separators. */
+function wrapFilters(text: string, maxChars: number): string[] {
+  const parts = text.split("  ·  ");
+  const lines: string[] = [];
+  let current = "";
+  for (const part of parts) {
+    const candidate = current ? `${current}  ·  ${part}` : part;
+    if (candidate.length > maxChars && current) {
+      lines.push(current);
+      current = part;
+    } else {
+      current = candidate;
+    }
+  }
+  if (current) lines.push(current);
+  return lines;
+}
+
+/**
+ * Generate an A4 landscape PDF report of the filtered rows (Prompt font embedded).
+ * Landscape keeps every table row on a single line, cutting the page count down.
+ */
 export async function exportPDF(
   rows: SheetRow[],
   ctx: { total: number; agencyCount: number; filters: Filters },
@@ -102,7 +123,7 @@ export async function exportPDF(
   const { jsPDF } = await import("jspdf");
   const { default: autoTable } = await import("jspdf-autotable");
 
-  const doc = new jsPDF({ unit: "mm", format: "a4" });
+  const doc = new jsPDF({ unit: "mm", format: "a4", orientation: "landscape" });
   doc.addFileToVFS("Prompt-Regular.ttf", await fetchFontBase64());
   doc.addFont("Prompt-Regular.ttf", "Prompt", "normal");
   doc.setFont("Prompt");
@@ -114,76 +135,82 @@ export async function exportPDF(
   const shown = sorted.slice(0, MAX_PDF_ROWS);
 
   // header band
+  const created = `สร้างเมื่อ: ${new Date().toLocaleString("th-TH", {
+    day: "2-digit",
+    month: "long",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  })}`;
   doc.setFillColor(47, 111, 79);
-  doc.rect(0, 0, pageW, 26, "F");
+  doc.rect(0, 0, pageW, 22, "F");
   doc.setTextColor(255, 255, 255);
-  doc.setFontSize(15);
-  doc.text("ราคาเสนอ/terminal — รายงานข้อมูล", margin, 12);
-  doc.setFontSize(8.5);
-  doc.text("sheet://1UtSyr…NRxcw · sheet99 · อัปเดตล่าสุดจาก Google Sheets", margin, 20);
+  doc.setFontSize(14);
+  doc.text("ราคาเสนอ/terminal — รายงานข้อมูล", margin, 10);
+  doc.setFontSize(8);
+  doc.text("sheet://1UtSyr…NRxcw · sheet99 · อัปเดตล่าสุดจาก Google Sheets", margin, 17);
+  doc.text(created, pageW - margin, 10, { align: "right" });
 
-  // summary block
+  // summary — single compact row (landscape has room for everything on one line)
   doc.setTextColor(38, 60, 49);
-  doc.setFontSize(10.5);
-  doc.text("สรุปข้อมูล", margin, 35);
+  doc.setFontSize(9);
   const activeFilters = (Object.entries(ctx.filters) as [keyof Filters, string][]).filter(
     ([, value]) => value !== "" && value !== undefined,
   );
-  const metaLines = [
-    `สร้างเมื่อ: ${new Date().toLocaleString("th-TH", {
-      day: "2-digit",
-      month: "long",
-      year: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    })}`,
-    `ยอดรวมราคาเสนอ: ${fmtBaht(ctx.total)}`,
-    `จำนวนรายการ: ${fmtNum(rows.length)} รายการ`,
-    `จำนวนหน่วยงาน: ${fmtNum(ctx.agencyCount)} หน่วยงาน`,
-    activeFilters.length > 0
-      ? `ตัวกรอง: ${activeFilters
-          .map(([key, value]) => `${DIMENSION_MAP[key].code}: ${value}`)
-          .join("  ·  ")}`
-      : "ตัวกรอง: ไม่มี (แสดงข้อมูลทั้งหมด)",
-  ];
-  doc.setFontSize(9);
-  metaLines.forEach((line, i) => {
-    doc.text(line, margin, 42 + i * 5.5);
-  });
-  const afterMeta = 42 + metaLines.length * 5.5 + 6;
+  doc.text(
+    `ยอดรวม: ${fmtBaht(ctx.total)}  ·  รายการ: ${fmtNum(rows.length)}  ·  หน่วยงาน: ${fmtNum(ctx.agencyCount)}  ·  แสดง: ${fmtNum(shown.length)} แถว${rows.length > MAX_PDF_ROWS ? ` จาก ${fmtNum(rows.length)}` : ""}`,
+    margin,
+    32,
+  );
 
-  // data table
+  // filters — wrapped onto extra lines only when the list is long
+  let tableStart = 38;
+  if (activeFilters.length > 0) {
+    const filterText = activeFilters
+      .map(([key, value]) => `${DIMENSION_MAP[key].code}: ${value}`)
+      .join("  ·  ");
+    const maxChars = Math.floor((pageW - margin * 2) / 3.1);
+    const lines = wrapFilters(`ตัวกรอง: ${filterText}`, maxChars);
+    doc.setFontSize(8.5);
+    doc.setTextColor(90, 100, 88);
+    lines.forEach((line, i) => {
+      doc.text(line, margin, 38 + i * 5);
+    });
+    tableStart = 38 + lines.length * 5 + 3;
+  }
+
+  // data table — wide columns + ellipsize keep every row on a single line
   const trunc = (s: string, n: number) => (s.length > n ? `${s.slice(0, n)}…` : s);
   autoTable(doc, {
-    startY: afterMeta,
-    margin: { left: margin, right: margin, top: 32, bottom: 16 },
+    startY: tableStart,
+    margin: { left: margin, right: margin, top: 26, bottom: 12 },
     head: [EXPORT_HEADERS as unknown as string[]],
     body: shown.map((row) => [
       row.regNo,
       row.date,
-      trunc(row.mission, 18),
-      trunc(row.workGroup, 16),
-      trunc(row.agency, 16),
-      trunc(row.item, 30),
-      trunc(row.category, 16),
-      trunc(row.type, 14),
+      trunc(row.mission, 26),
+      trunc(row.workGroup, 24),
+      trunc(row.agency, 24),
+      trunc(row.item, 42),
+      trunc(row.category, 20),
+      trunc(row.type, 18),
       row.planType || "—",
       fmtBaht(row.price),
     ]),
     styles: {
       font: "Prompt",
-      fontSize: 7,
-      cellPadding: 1.4,
+      fontSize: 7.5,
+      cellPadding: 1.2,
       textColor: [45, 55, 50],
       lineColor: [212, 208, 192],
       lineWidth: 0.15,
-      overflow: "linebreak",
+      overflow: "ellipsize",
     },
     headStyles: {
       fillColor: [47, 111, 79],
       textColor: [255, 255, 255],
       fontStyle: "normal",
-      fontSize: 7,
+      fontSize: 7.5,
       halign: "left",
     },
     alternateRowStyles: { fillColor: [244, 242, 234] },
@@ -194,8 +221,8 @@ export async function exportPDF(
       const page = doc.getNumberOfPages();
       doc.setFontSize(8);
       doc.setTextColor(130, 135, 120);
-      doc.text(`หน้า ${page}`, pageW - margin, pageH - 8, { align: "right" });
-      doc.text("ราคาเสนอ/terminal", margin, pageH - 8);
+      doc.text(`หน้า ${page}`, pageW - margin, pageH - 7, { align: "right" });
+      doc.text("ราคาเสนอ/terminal", margin, pageH - 7);
     },
   });
 
