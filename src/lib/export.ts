@@ -114,7 +114,8 @@ function wrapFilters(text: string, maxChars: number): string[] {
 
 /**
  * Generate an A4 landscape PDF report of the filtered rows (Prompt font embedded).
- * Landscape keeps every table row on a single line, cutting the page count down.
+ * Landscape + column widths sized to the real data keep most rows on one line;
+ * long values wrap to a new line with the full text preserved (never truncated).
  */
 export async function exportPDF(
   rows: SheetRow[],
@@ -179,43 +180,53 @@ export async function exportPDF(
     tableStart = 38 + lines.length * 5 + 3;
   }
 
-  // data table — wide columns + ellipsize keep every row on a single line
-  const trunc = (s: string, n: number) => (s.length > n ? `${s.slice(0, n)}…` : s);
+  // data table — keep every row on one line when it fits; long values wrap to a
+  // new line with the full text preserved (no truncation)
   autoTable(doc, {
     startY: tableStart,
-    margin: { left: margin, right: margin, top: 26, bottom: 12 },
+    margin: { left: 12, right: 12, top: 26, bottom: 12 },
     head: [EXPORT_HEADERS as unknown as string[]],
     body: shown.map((row) => [
       row.regNo,
       row.date,
-      trunc(row.mission, 26),
-      trunc(row.workGroup, 24),
-      trunc(row.agency, 24),
-      trunc(row.item, 42),
-      trunc(row.category, 20),
-      trunc(row.type, 18),
+      row.mission,
+      row.workGroup,
+      row.agency,
+      row.item,
+      row.category,
+      row.type,
       row.planType || "—",
       fmtBaht(row.price),
     ]),
     styles: {
       font: "Prompt",
       fontSize: 7.5,
-      cellPadding: 1.2,
+      cellPadding: 1.0,
       textColor: [45, 55, 50],
       lineColor: [212, 208, 192],
       lineWidth: 0.15,
-      overflow: "ellipsize",
+      overflow: "linebreak",
     },
     headStyles: {
       fillColor: [47, 111, 79],
       textColor: [255, 255, 255],
       fontStyle: "normal",
-      fontSize: 7.5,
+      fontSize: 6.5,
       halign: "left",
     },
     alternateRowStyles: { fillColor: [244, 242, 234] },
     columnStyles: {
-      9: { halign: "right" },
+      // explicit widths (mm) sized to the real data so most rows fit on one line
+      0: { cellWidth: 26 }, // เลขทะเบียนคุม
+      1: { cellWidth: 24 }, // เดือน
+      2: { cellWidth: 33 }, // กลุ่มภารกิจ
+      3: { cellWidth: 27 }, // กลุ่มงาน
+      4: { cellWidth: 26 }, // หน่วยงาน
+      5: { cellWidth: 48 }, // รายการ
+      6: { cellWidth: 21 }, // หมวด
+      7: { cellWidth: 24 }, // ประเภท
+      8: { cellWidth: 20 }, // ประเภทแผน
+      9: { cellWidth: 24, halign: "right" }, // ราคาเสนอ
     },
     didDrawPage: () => {
       const page = doc.getNumberOfPages();
