@@ -2,710 +2,696 @@
 <html lang="th">
 <head>
   <base target="_top">
-  <meta charset="UTF-8">
-  <title>ราคาเสนอ/terminal</title>
-  <!-- Google Fonts อนุญาตให้โหลดได้ใน Apps Script (สคริปต์จาก CDN ภายนอกถูก CSP บล็อก) -->
+  <meta charset="utf-8">
+  <title>ราคาเสนอ/terminal — วิเคราะห์ราคาเสนอ</title>
+  <!-- Google Fonts อนุญาตให้โหลดได้ใน Apps Script HtmlService -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
-
+  <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
   <style>
-    /* ============ light terminal theme ============ */
+    /* ============ ธีม terminal light ============ */
     :root {
-      --bg: #f6f4ec;
-      --card: #fcfbf6;
-      --card2: #f1efe4;
-      --ink: #2c3a30;
-      --ink-soft: #45524a;
-      --muted: #737a68;
-      --faint: #9aa08c;
-      --line: #ded9c6;
-      --line-soft: #e9e5d4;
+      --bg: #f7f6f0;
+      --card: #ffffff;
+      --border: #e4e0d1;
+      --border-strong: #d3cdb8;
+      --text: #212b24;
+      --muted: #6f7363;
       --green: #2f6f4f;
-      --green-deep: #27603f;
-      --green-soft: rgba(47, 111, 79, 0.07);
+      --green-soft: #e9f1ec;
       --amber: #a16207;
-      --amber-soft: rgba(161, 98, 7, 0.08);
-      --red: #b3402e;
-      --mono: "JetBrains Mono", ui-monospace, Menlo, Consolas, monospace;
-      --sans: "Prompt", system-ui, sans-serif;
+      --red: #b3402f;
     }
-
-    * { box-sizing: border-box; }
-
-    html, body { margin: 0; padding: 0; }
-
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html { -webkit-text-size-adjust: 100%; }
     body {
       background: var(--bg);
-      color: var(--ink);
-      font-family: var(--sans);
+      color: var(--text);
+      font-family: "Prompt", system-ui, sans-serif;
       font-size: 14px;
-      line-height: 1.55;
-      -webkit-font-smoothing: antialiased;
+      line-height: 1.5;
     }
+    .mono { font-family: "JetBrains Mono", "Prompt", monospace; }
 
-    .wrap { max-width: 1200px; margin: 0 auto; padding: 0 20px; }
-    .stack { display: flex; flex-direction: column; gap: 30px; padding: 26px 0 44px; }
-
-    /* ---------- header ---------- */
-    header {
-      position: sticky; top: 0; z-index: 40;
-      background: rgba(246, 244, 236, 0.88);
-      -webkit-backdrop-filter: blur(8px);
-      backdrop-filter: blur(8px);
-      border-bottom: 1px solid var(--line);
+    /* ============ header ============ */
+    header.top {
+      position: sticky; top: 0; z-index: 30;
+      background: rgba(247, 246, 240, 0.9);
+      backdrop-filter: blur(6px);
+      border-bottom: 1px solid var(--border);
     }
-    .hrow { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 0; }
-    .brand { display: flex; align-items: center; gap: 10px; min-width: 0; }
-    .brand-mark {
-      width: 34px; height: 34px; flex-shrink: 0;
+    .top-inner {
+      max-width: 1152px; margin: 0 auto;
+      display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between;
+      gap: 12px; padding: 12px 16px;
+    }
+    .logo { display: flex; align-items: center; gap: 10px; min-width: 0; }
+    .logo-mark {
+      width: 32px; height: 32px; flex-shrink: 0;
       display: flex; align-items: center; justify-content: center;
-      border: 1px solid rgba(47, 111, 79, 0.35);
-      background: var(--green-soft);
-      border-radius: 6px;
-      font-family: var(--mono); font-weight: 700; font-size: 13px; color: var(--green);
+      border: 1px solid rgba(47, 111, 79, 0.35); background: rgba(47, 111, 79, 0.1);
+      border-radius: 6px; font-family: "JetBrains Mono", monospace; font-weight: 700;
+      font-size: 13px; color: var(--green);
     }
-    .brand-title { font-size: 14.5px; font-weight: 600; letter-spacing: -0.01em; margin: 0; line-height: 1.25; }
-    .brand-title em { font-style: normal; color: var(--green); }
-    .brand-sub { font-family: var(--mono); font-size: 10px; color: var(--muted); margin: 0; line-height: 1.3; }
-    .hactions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+    .logo-title { font-weight: 600; font-size: 14px; white-space: nowrap; }
+    .logo-title .accent { color: var(--green); }
+    .logo-sub { font-family: "JetBrains Mono", monospace; font-size: 10px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .top-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 
     .status {
-      display: inline-flex; align-items: center; gap: 8px;
-      border: 1px solid var(--line); background: var(--card);
-      border-radius: 6px; padding: 7px 10px;
-      font-family: var(--mono); font-size: 11px; color: var(--muted);
-      white-space: nowrap;
+      display: flex; align-items: center; gap: 8px;
+      border: 1px solid var(--border); background: var(--card);
+      border-radius: 6px; padding: 6px 10px;
     }
-    .status .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--green); flex-shrink: 0; }
-    .status .dot.sync { background: var(--amber); animation: pulse 1.1s ease-in-out infinite; }
-    .status .dot.err { background: var(--red); }
+    .dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+    .dot.green { background: var(--green); }
+    .dot.amber { background: #d97706; }
+    .dot.red { background: var(--red); }
+    .dot.gray { background: #b9b49f; }
+    .pulse { animation: pulse 1.2s ease-in-out infinite; }
     @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.35; } }
+    .status-label { font-family: "JetBrains Mono", monospace; font-size: 11px; color: var(--muted); white-space: nowrap; }
 
-    /* ---------- buttons ---------- */
     .btn {
-      display: inline-flex; align-items: center; justify-content: center; gap: 6px;
-      border: 1px solid var(--line); background: var(--card); color: var(--ink);
-      font-family: var(--sans); font-size: 12px; font-weight: 400;
-      padding: 7px 12px; border-radius: 6px; cursor: pointer;
+      display: inline-flex; align-items: center; gap: 6px;
+      border: 1px solid var(--border-strong); background: var(--card); color: var(--text);
+      border-radius: 6px; padding: 7px 12px;
+      font-family: "Prompt"; font-size: 12.5px; cursor: pointer;
       transition: border-color 0.15s, color 0.15s, background 0.15s;
-      white-space: nowrap;
     }
-    .btn:hover:not(:disabled) { border-color: var(--green); color: var(--green); }
-    .btn:disabled { opacity: 0.45; cursor: default; }
-    .btn-sm { padding: 4px 9px; font-size: 11px; }
-    .btn-ghost { background: transparent; border-color: transparent; color: var(--muted); }
-    .btn-ghost:hover:not(:disabled) { color: var(--ink); border-color: transparent; }
-    .btn .chev { opacity: 0.55; }
+    .btn:hover { border-color: var(--green); color: var(--green); }
+    .btn:disabled { opacity: 0.45; cursor: not-allowed; }
+    .btn-primary { background: var(--green); border-color: var(--green); color: #fff; }
+    .btn-primary:hover { background: #285f43; color: #fff; }
+    .btn-sm { padding: 5px 10px; font-size: 12px; }
+    .btn-ghost { border-color: transparent; background: transparent; color: var(--muted); }
+    .btn-ghost:hover { color: var(--text); border-color: transparent; }
 
-    /* ---------- export menu ---------- */
-    .menu-wrap { position: relative; }
-    .menu {
-      position: absolute; right: 0; top: calc(100% + 6px); width: 250px; z-index: 52;
-      background: var(--card); border: 1px solid var(--line); border-radius: 8px;
-      box-shadow: 0 12px 32px rgba(44, 58, 48, 0.14); padding: 6px;
-    }
-    .menu-item {
-      display: flex; flex-direction: column; gap: 2px; width: 100%;
-      text-align: left; padding: 9px 11px; border-radius: 6px;
-      background: transparent; border: 0; font: inherit; cursor: pointer;
-    }
-    .menu-item:hover { background: var(--card2); }
-    .menu-item b { font-size: 13px; font-weight: 500; color: var(--green); }
-    .menu-item span { font-family: var(--mono); font-size: 10px; color: var(--muted); }
+    /* ============ main layout ============ */
+    main { max-width: 1152px; margin: 0 auto; padding: 28px 16px 48px; display: flex; flex-direction: column; gap: 28px; }
+    section { display: flex; flex-direction: column; gap: 12px; }
+    .sec-head { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+    .sec-index { font-family: "JetBrains Mono", monospace; font-size: 11px; font-weight: 700; letter-spacing: 0.16em; color: var(--green); }
+    .sec-code { font-family: "JetBrains Mono", monospace; font-size: 10px; letter-spacing: 0.2em; color: var(--muted); }
+    .sec-title { font-size: 15px; font-weight: 500; }
+    .card { background: var(--card); border: 1px solid var(--border); border-radius: 6px; padding: 18px 20px; }
 
-    /* ---------- alerts ---------- */
-    .alert {
-      display: flex; align-items: flex-start; gap: 10px;
-      border: 1px solid rgba(161, 98, 7, 0.45); background: var(--amber-soft);
-      border-radius: 6px; padding: 12px 14px; font-size: 13px; color: #6b4a0a;
+    .banner {
+      display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+      border: 1px solid rgba(179, 64, 47, 0.4); background: rgba(179, 64, 47, 0.07);
+      color: #7c2d20; border-radius: 6px; padding: 10px 14px; font-size: 13px;
     }
-    .alert .a-icon { color: var(--amber); flex-shrink: 0; margin-top: 1px; }
-    .alert .a-msg { flex: 1; min-width: 0; overflow-wrap: anywhere; }
-    .alert .a-close { background: none; border: 0; cursor: pointer; color: #8a6420; font-size: 14px; padding: 0 2px; line-height: 1; }
+    .banner .banner-text { flex: 1; min-width: 200px; }
+    .banner .close-x { cursor: pointer; border: none; background: none; color: #7c2d20; font-size: 14px; padding: 2px 4px; }
 
-    /* ---------- section headers ---------- */
-    .sec { display: flex; align-items: baseline; gap: 10px; }
-    .sec .i { font-family: var(--mono); font-size: 11px; font-weight: 700; letter-spacing: 0.16em; color: var(--green); }
-    .sec .c { font-family: var(--mono); font-size: 10px; letter-spacing: 0.2em; color: var(--muted); }
-    .sec h2 { font-size: 15px; font-weight: 500; margin: 0; }
-
-    /* ---------- cards ---------- */
-    .card {
-      border: 1px solid var(--line); background: var(--card);
-      border-radius: 8px; padding: 18px;
+    /* ============ filters ============ */
+    .filter-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(228px, 1fr)); gap: 12px; }
+    .fctrl { position: relative; min-width: 0; }
+    .fctrl-head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; margin-bottom: 5px; }
+    .fcode { font-family: "JetBrains Mono", monospace; font-size: 10px; font-weight: 700; letter-spacing: 0.14em; color: var(--muted); }
+    .flabel { font-size: 11px; font-weight: 500; color: var(--text); opacity: 0.8; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .fbtn {
+      width: 100%; height: 36px; display: flex; align-items: center; gap: 6px;
+      border: 1px solid var(--border-strong); background: var(--card); border-radius: 6px;
+      padding: 0 10px; font-family: "Prompt"; font-size: 13px; color: var(--muted);
+      cursor: pointer; text-align: left;
     }
-    .card h3 { font-size: 14.5px; font-weight: 500; margin: 0; }
-    .card .cap { font-family: var(--mono); font-size: 11px; color: var(--muted); margin: 4px 0 0; }
-    .card-head { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: 10px; margin-bottom: 14px; }
-
-    /* ---------- filters ---------- */
-    .filters { border: 1px solid var(--line); background: var(--card); border-radius: 8px; padding: 16px; }
-    .filter-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
-    @media (max-width: 980px) { .filter-grid { grid-template-columns: repeat(2, 1fr); } }
-    @media (max-width: 520px) { .filter-grid { grid-template-columns: 1fr; } }
-    .filter { min-width: 0; }
-    .filter-label { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; margin-bottom: 6px; }
-    .filter-label code { font-family: var(--mono); font-size: 10px; font-weight: 600; letter-spacing: 0.14em; color: var(--muted); }
-    .filter-label span { font-size: 11px; font-weight: 500; color: rgba(44, 58, 48, 0.8); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    .filter-btn {
-      display: flex; align-items: center; gap: 8px; width: 100%;
-      height: 38px; padding: 0 10px;
-      border: 1px solid var(--line); background: var(--card); color: var(--muted);
-      border-radius: 6px; font: inherit; font-size: 13px; cursor: pointer;
-      text-align: left; transition: border-color 0.15s, color 0.15s;
+    .fbtn:hover { border-color: var(--green); color: var(--text); }
+    .fbtn.active { border-color: rgba(47, 111, 79, 0.55); color: var(--green); }
+    .fbtn-label { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .fbtn-x { color: var(--muted); font-size: 12px; cursor: pointer; padding: 0 2px; }
+    .fbtn-x:hover { color: var(--green); }
+    .fbtn-caret { opacity: 0.5; font-size: 10px; }
+    .fpop {
+      position: absolute; top: calc(100% + 6px); left: 0; z-index: 40;
+      width: min(320px, calc(100vw - 32px));
+      background: var(--card); border: 1px solid var(--border-strong); border-radius: 6px;
+      box-shadow: 0 8px 24px rgba(40, 50, 40, 0.12); overflow: hidden;
     }
-    .filter-btn:hover { border-color: rgba(47, 111, 79, 0.5); color: var(--ink); }
-    .filter-btn.active { border-color: rgba(47, 111, 79, 0.55); color: var(--green); }
-    .filter-btn .fb-label { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    .filter-btn .fb-count {
-      flex-shrink: 0; background: var(--green-soft); color: var(--green);
-      font-family: var(--mono); font-size: 10px; font-weight: 600; border-radius: 3px; padding: 1px 5px;
+    .fsearch {
+      width: 100%; border: none; border-bottom: 1px solid var(--border);
+      padding: 10px 12px; font-family: "Prompt"; font-size: 12.5px; outline: none; background: var(--bg);
     }
-    .filter-btn .fb-caret { flex-shrink: 0; opacity: 0.55; font-size: 10px; }
+    .fopt-all {
+      display: block; width: 100%; border: none; border-bottom: 1px solid var(--border);
+      background: var(--bg); text-align: left; font-family: "Prompt"; font-size: 12.5px;
+      color: var(--green); padding: 8px 12px; cursor: pointer;
+    }
+    .fopt-all:hover { background: var(--green-soft); }
+    .fopts { max-height: 260px; overflow-y: auto; }
+    .fopt { display: flex; align-items: center; gap: 8px; padding: 8px 12px; cursor: pointer; font-size: 13px; }
+    .fopt:hover { background: var(--green-soft); }
+    .fopt input { accent-color: var(--green); width: 14px; height: 14px; flex-shrink: 0; cursor: pointer; }
+    .fopt-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .fopt-count { font-family: "JetBrains Mono", monospace; font-size: 10px; color: var(--muted); flex-shrink: 0; }
+    .fopt-empty { padding: 14px 12px; font-size: 12.5px; color: var(--muted); text-align: center; }
+    .ffoot { border-top: 1px solid var(--border); padding: 7px 12px; text-align: center; font-family: "JetBrains Mono", monospace; font-size: 10px; color: var(--muted); }
 
-    /* active chips */
-    .chips-row { display: flex; flex-wrap: wrap; align-items: center; gap: 7px; border-top: 1px solid var(--line-soft); margin-top: 14px; padding-top: 12px; }
-    .chips-note { font-family: var(--mono); font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); }
-    .chips-note b { color: var(--green); font-weight: 700; }
+    .filter-meta {
+      display: flex; flex-wrap: wrap; align-items: center; gap: 8px;
+      margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--border);
+    }
+    .lbl-mono { font-family: "JetBrains Mono", monospace; font-size: 10px; font-weight: 700; letter-spacing: 0.14em; color: var(--muted); }
+    .lbl { font-size: 11px; font-weight: 500; color: var(--text); opacity: 0.8; }
+    input[type="date"] {
+      height: 32px; border: 1px solid var(--border-strong); background: var(--card);
+      border-radius: 6px; padding: 0 8px; font-family: "JetBrains Mono", "Prompt", monospace;
+      font-size: 11.5px; color: var(--text); outline: none;
+    }
+    input[type="date"]:focus { border-color: var(--green); box-shadow: 0 0 0 2px rgba(47, 111, 79, 0.18); }
+    .date-sep { font-family: "JetBrains Mono", monospace; font-size: 11px; color: var(--muted); }
+
+    .chips-row {
+      display: flex; flex-wrap: wrap; align-items: center; gap: 8px;
+      margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border);
+    }
+    .active-label { font-family: "JetBrains Mono", monospace; font-size: 10px; text-transform: uppercase; letter-spacing: 0.12em; color: var(--muted); }
+    .active-label .accent { color: var(--green); }
     .chip {
       display: inline-flex; align-items: center; gap: 6px;
-      border: 1px solid rgba(47, 111, 79, 0.35); background: var(--green-soft); color: var(--green);
-      border-radius: 4px; padding: 3px 8px; font-size: 11.5px; cursor: pointer;
-      transition: background 0.15s;
+      border: 1px solid rgba(47, 111, 79, 0.3); background: rgba(47, 111, 79, 0.06);
+      color: var(--green); border-radius: 4px; padding: 4px 8px;
+      font-family: "Prompt"; font-size: 11.5px; cursor: pointer;
     }
-    .chip:hover { background: rgba(47, 111, 79, 0.13); }
-    .chip code { font-family: var(--mono); font-size: 9px; font-weight: 600; letter-spacing: 0.06em; opacity: 0.75; }
-    .chip .chip-x { opacity: 0.55; font-size: 11px; line-height: 1; }
-    .chip:hover .chip-x { opacity: 1; }
+    .chip:hover { background: rgba(47, 111, 79, 0.12); }
+    .chip-code { font-family: "JetBrains Mono", monospace; font-size: 9px; font-weight: 700; letter-spacing: 0.08em; }
+    .chip-val { max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .chip-x { opacity: 0.6; font-size: 10px; }
 
-    /* date range row */
-    .daterow {
-      display: flex; flex-wrap: wrap; align-items: center; gap: 10px;
-      border-top: 1px solid var(--line-soft); margin-top: 14px; padding-top: 12px;
-    }
-    .daterow .d-label { display: flex; align-items: baseline; gap: 8px; }
-    .daterow .d-label code { font-family: var(--mono); font-size: 10px; font-weight: 600; letter-spacing: 0.14em; color: var(--muted); }
-    .daterow .d-label span { font-size: 11px; font-weight: 500; color: rgba(44, 58, 48, 0.8); }
-    .daterow input[type="date"] {
-      height: 34px; padding: 0 9px;
-      border: 1px solid var(--line); background: var(--card); color: var(--ink);
-      border-radius: 6px; font: inherit; font-size: 12.5px; outline: none;
-    }
-    .daterow input[type="date"]:focus { border-color: rgba(47, 111, 79, 0.55); }
-    .daterow .d-arrow { font-family: var(--mono); font-size: 12px; color: var(--muted); }
+    /* ============ KPIs ============ */
+    .kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 12px; }
+    .kpi { border: 1px solid var(--border); background: var(--card); border-radius: 6px; padding: 16px; }
+    .kpi-label { font-family: "JetBrains Mono", monospace; font-size: 10px; letter-spacing: 0.14em; color: var(--muted); }
+    .kpi-value { font-family: "JetBrains Mono", "Prompt", monospace; font-size: 22px; font-weight: 600; margin-top: 8px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .kpi-cap { font-size: 11px; color: var(--muted); margin-top: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
-    /* ---------- popover ---------- */
-    #popoverBackdrop { position: fixed; inset: 0; z-index: 55; display: none; background: transparent; }
-    #popover {
-      position: fixed; z-index: 60; display: none;
-      background: var(--card); border: 1px solid var(--line); border-radius: 8px;
-      box-shadow: 0 12px 32px rgba(44, 58, 48, 0.16);
-      overflow: hidden; flex-direction: column;
+    /* ============ charts ============ */
+    .chart-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 16px; }
+    .chart-title { font-size: 15px; font-weight: 500; }
+    .chart-title .accent { color: var(--green); }
+    .chart-sub { font-family: "JetBrains Mono", monospace; font-size: 11px; color: var(--muted); margin-top: 4px; }
+    .gb-btns { display: flex; flex-wrap: wrap; gap: 6px; }
+    .gb-btn {
+      border: 1px solid var(--border-strong); background: var(--card); color: var(--muted);
+      border-radius: 4px; padding: 4px 9px; font-family: "JetBrains Mono", monospace;
+      font-size: 10px; cursor: pointer; letter-spacing: 0.04em;
     }
-    .pop-head { padding: 8px; border-bottom: 1px solid var(--line-soft); }
-    .pop-head input {
-      width: 100%; height: 32px; padding: 0 9px;
-      border: 1px solid var(--line); border-radius: 5px; background: var(--bg);
-      font: inherit; font-size: 12.5px; color: var(--ink); outline: none;
-    }
-    .pop-head input:focus { border-color: rgba(47, 111, 79, 0.55); }
-    .pop-list { max-height: 300px; overflow-y: auto; padding: 6px; }
-    .pop-opt {
-      display: flex; align-items: center; gap: 8px; width: 100%;
-      padding: 7px 8px; border-radius: 6px; border: 0; background: transparent;
-      font: inherit; font-size: 13px; color: var(--ink); text-align: left; cursor: pointer;
-    }
-    .pop-opt:hover { background: var(--card2); }
-    .pop-opt.sel { color: var(--green); }
-    .cb {
-      width: 16px; height: 16px; flex-shrink: 0;
-      border: 1px solid var(--line); border-radius: 4px;
-      display: inline-flex; align-items: center; justify-content: center;
-      font-size: 10px; color: #fff;
-    }
-    .pop-opt.sel .cb { background: var(--green); border-color: var(--green); }
-    .pop-label { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    .pop-count { flex-shrink: 0; font-family: var(--mono); font-size: 10px; color: var(--muted); }
-    .pop-clear { flex-shrink: 0; font-family: var(--mono); font-size: 10px; color: var(--green); }
-    .pop-empty { padding: 16px; text-align: center; font-size: 12px; color: var(--muted); }
-    .pop-foot { border-top: 1px solid var(--line-soft); padding: 7px; text-align: center; font-family: var(--mono); font-size: 10px; color: var(--muted); }
+    .gb-btn:hover { border-color: rgba(47, 111, 79, 0.55); color: var(--green); }
+    .gb-btn.on { background: var(--green); border-color: var(--green); color: #fff; }
 
-    /* ---------- KPIs ---------- */
-    .kpi-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
-    @media (max-width: 900px) { .kpi-grid { grid-template-columns: repeat(2, 1fr); } }
-    @media (max-width: 480px) { .kpi-grid { grid-template-columns: 1fr; } }
-    .kpi { border: 1px solid var(--line); background: var(--card); border-radius: 6px; padding: 14px 16px; min-width: 0; }
-    .kpi .k { font-family: var(--mono); font-size: 10px; letter-spacing: 0.14em; color: var(--muted); }
-    .kpi .v { font-family: var(--mono); font-size: 21px; font-weight: 600; margin-top: 6px; font-variant-numeric: tabular-nums; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    .kpi .c { font-size: 11px; color: var(--muted); margin-top: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .barchart { display: flex; gap: 6px; height: 320px; padding-top: 16px; }
+    .bc-col { flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: center; }
+    .bc-track { flex: 1; width: 100%; min-height: 0; display: flex; flex-direction: column; justify-content: flex-end; align-items: center; }
+    .bc-bar { width: min(100%, 44px); border-radius: 3px 3px 0 0; background: var(--green); min-height: 2px; }
+    .bc-bar.top { background: var(--amber); }
+    .bc-val { font-family: "JetBrains Mono", monospace; font-size: 9.5px; color: var(--muted); margin-top: 4px; white-space: nowrap; }
+    .bc-label { font-size: 10px; color: var(--muted); max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-top: 2px; }
 
-    /* ---------- charts ---------- */
-    .chart-grid2 { display: grid; grid-template-columns: 2fr 3fr; gap: 14px; }
-    @media (max-width: 900px) { .chart-grid2 { grid-template-columns: 1fr; } }
+    .grid-5 { display: grid; gap: 16px; }
+    @media (min-width: 960px) { .grid-5 { grid-template-columns: 2fr 3fr; } }
+    .grid-5 .full { grid-column: 1 / -1; }
+    .card-body { display: flex; flex-direction: column; }
 
-    .dim-switch { display: flex; flex-wrap: wrap; gap: 6px; }
-    .dim-btn {
-      border: 1px solid var(--line); background: var(--card); color: var(--muted);
-      font-family: var(--mono); font-size: 10px; letter-spacing: 0.04em;
-      padding: 4px 9px; border-radius: 4px; cursor: pointer;
-      transition: all 0.15s;
-    }
-    .dim-btn:hover { border-color: rgba(47, 111, 79, 0.5); color: var(--green); }
-    .dim-btn.on { background: var(--green); border-color: var(--green); color: #fff; }
+    .donut-wrap { display: flex; flex-direction: column; align-items: center; gap: 14px; }
+    .donut { width: 168px; height: 168px; border-radius: 50%; position: relative; flex-shrink: 0; }
+    .donut::after { content: ""; position: absolute; inset: 33%; background: var(--card); border-radius: 50%; }
+    .donut-center { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 1; text-align: center; padding: 0 24px; }
+    .donut-center .v { font-family: "JetBrains Mono", "Prompt", monospace; font-size: 14px; font-weight: 600; }
+    .donut-center .c { font-family: "JetBrains Mono", monospace; font-size: 9px; color: var(--muted); }
+    .donut-legend { list-style: none; width: 100%; display: flex; flex-direction: column; gap: 6px; }
+    .donut-legend li { display: flex; align-items: center; gap: 8px; font-size: 12px; }
+    .dot-sq { width: 8px; height: 8px; border-radius: 2px; flex-shrink: 0; }
+    .l-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: rgba(33, 43, 36, 0.9); }
+    .l-share { font-family: "JetBrains Mono", monospace; font-size: 10.5px; color: var(--muted); }
+    .l-val { font-family: "JetBrains Mono", monospace; font-size: 10.5px; color: var(--green); }
 
-    .empty-chart { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; height: 240px; color: var(--muted); }
-    .empty-chart .big { font-size: 26px; opacity: 0.4; font-family: var(--mono); }
-    .empty-chart p { font-size: 12.5px; margin: 0; }
+    .hbar-list { display: flex; flex-direction: column; gap: 9px; }
+    .hbar-row { display: flex; align-items: center; gap: 10px; }
+    .hbar-name { width: 148px; flex-shrink: 0; font-size: 11.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .hbar-track { flex: 1; height: 16px; background: var(--bg); border: 1px solid var(--border); border-radius: 4px; overflow: hidden; }
+    .hbar-fill { height: 100%; background: var(--green); border-radius: 4px 0 0 4px; min-width: 3px; }
+    .hbar-fill.top { background: var(--amber); }
+    .hbar-val { width: 78px; flex-shrink: 0; text-align: right; font-family: "JetBrains Mono", monospace; font-size: 10.5px; color: var(--muted); }
 
-    /* vertical bars (main chart) */
-    .bars {
-      display: flex; align-items: flex-end; gap: 6px;
-      height: 300px; padding: 14px 4px 0 4px;
-      background-image: repeating-linear-gradient(to top,
-        transparent 0, transparent calc(25% - 1px),
-        var(--line-soft) calc(25% - 1px), var(--line-soft) 25%);
-      border-bottom: 1px solid var(--line);
-    }
-    .bar-col { flex: 1; min-width: 0; height: 100%; display: flex; flex-direction: column; justify-content: flex-end; gap: 3px; }
-    .bar-track { flex: 1; display: flex; flex-direction: column; justify-content: flex-end; align-items: center; gap: 3px; min-height: 0; }
-    .bar-val { font-family: var(--mono); font-size: 9.5px; color: var(--muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
-    .bar { width: min(100%, 46px); background: var(--green); border-radius: 3px 3px 0 0; min-height: 2px; transition: height 0.35s ease; }
-    .bar.amber { background: var(--amber); }
-    .bar-label {
-      font-size: 10px; color: var(--ink-soft); text-align: center;
-      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-      max-width: 100%; padding-top: 2px;
-    }
-
-    /* donut */
-    .donut-wrap { display: flex; flex-direction: column; align-items: center; gap: 16px; }
-    .donut { position: relative; width: 190px; height: 190px; border-radius: 50%; flex-shrink: 0; }
-    .donut::after {
-      content: ""; position: absolute; inset: 31%; border-radius: 50%;
-      background: var(--card);
-    }
-    .donut-center {
-      position: absolute; inset: 0; display: flex; flex-direction: column;
-      align-items: center; justify-content: center; z-index: 1; text-align: center;
-    }
-    .donut-center .dv { font-family: var(--mono); font-size: 16px; font-weight: 700; color: var(--ink); font-variant-numeric: tabular-nums; }
-    .donut-center .dl { font-size: 10px; color: var(--muted); }
-    .legend { width: 100%; list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 5px; }
-    .legend li { display: flex; align-items: center; gap: 8px; font-size: 12px; min-width: 0; }
-    .legend .sw { width: 8px; height: 8px; border-radius: 2px; flex-shrink: 0; }
-    .legend .lg-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: rgba(44, 58, 48, 0.85); }
-    .legend .lg-pct { font-family: var(--mono); font-size: 10.5px; color: var(--muted); flex-shrink: 0; }
-    .legend .lg-sum { font-family: var(--mono); font-size: 10.5px; color: var(--green); flex-shrink: 0; font-variant-numeric: tabular-nums; }
-
-    /* horizontal bars (top agencies) */
-    .hbar { display: flex; flex-direction: column; gap: 11px; }
-    .hbar-row { display: grid; grid-template-columns: 150px 1fr 108px; gap: 10px; align-items: center; }
-    @media (max-width: 560px) { .hbar-row { grid-template-columns: 120px 1fr 92px; } }
-    .hbar-name { font-size: 11.5px; color: var(--ink-soft); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    .hbar-track { height: 14px; background: var(--card2); border-radius: 3px; overflow: hidden; }
-    .hbar-fill { height: 100%; background: var(--green); border-radius: 3px; min-width: 2px; transition: width 0.35s ease; }
-    .hbar-fill.amber { background: var(--amber); }
-    .hbar-val { font-family: var(--mono); font-size: 10.5px; color: var(--muted); text-align: right; font-variant-numeric: tabular-nums; }
-
-    /* plan breakdown */
-    .plan-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
-    @media (max-width: 700px) { .plan-grid { grid-template-columns: 1fr; } }
-    .plan-card { border: 1px solid var(--line); background: var(--bg); border-radius: 6px; padding: 14px 16px; }
+    .plan-grid { display: grid; gap: 12px; }
+    @media (min-width: 640px) { .plan-grid { grid-template-columns: repeat(3, 1fr); } }
+    .plan-card { border: 1px solid var(--border); background: var(--bg); border-radius: 6px; padding: 14px 16px; }
     .plan-head { display: flex; align-items: center; gap: 8px; }
-    .plan-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
     .plan-name { font-size: 13px; font-weight: 500; }
-    .plan-sum { font-family: var(--mono); font-size: 19px; font-weight: 600; margin-top: 8px; font-variant-numeric: tabular-nums; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    .plan-cap { font-family: var(--mono); font-size: 10.5px; color: var(--muted); margin-top: 3px; }
-    .plan-bar { height: 6px; background: var(--card2); border-radius: 99px; margin-top: 10px; overflow: hidden; }
-    .plan-fill { height: 100%; border-radius: 99px; transition: width 0.35s ease; }
+    .plan-amount { font-family: "JetBrains Mono", "Prompt", monospace; font-size: 20px; font-weight: 600; margin-top: 10px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .plan-meta { font-family: "JetBrains Mono", monospace; font-size: 10.5px; color: var(--muted); margin-top: 4px; }
+    .plan-track { height: 6px; background: var(--border); border-radius: 999px; margin-top: 10px; overflow: hidden; }
+    .plan-fill { height: 100%; border-radius: 999px; }
 
-    /* ---------- table ---------- */
-    .table-meta { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 12px; }
-    .table-meta .tm-rows { font-family: var(--mono); font-size: 11px; color: var(--muted); }
-    .table-meta .tm-rows b { color: var(--green); font-weight: 700; }
-    select.sort {
-      height: 32px; padding: 0 8px; border: 1px solid var(--line); border-radius: 6px;
-      background: var(--card); color: var(--ink); font: inherit; font-size: 12px; cursor: pointer;
-    }
-    .table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 6px; background: var(--card); }
-    table.data { width: 100%; min-width: 1180px; border-collapse: collapse; }
+    /* ============ table ============ */
+    .table-card { padding: 18px 0; }
+    .table-toolbar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; padding: 0 20px; }
+    .rows-label { font-family: "JetBrains Mono", monospace; font-size: 11px; color: var(--muted); }
+    .rows-label .accent { color: var(--green); }
+    .sort-select { height: 32px; border: 1px solid var(--border-strong); background: var(--card); border-radius: 6px; padding: 0 8px; font-family: "Prompt"; font-size: 12px; color: var(--text); outline: none; }
+    .table-scroll { overflow-x: auto; margin-top: 14px; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }
+    table.data { border-collapse: collapse; width: 100%; min-width: 1080px; }
     table.data th {
-      background: rgba(44, 58, 48, 0.04);
-      font-family: var(--mono); font-size: 10px; font-weight: 600;
-      letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted);
-      text-align: left; padding: 9px 10px; border-bottom: 1px solid var(--line);
-      white-space: nowrap;
+      background: rgba(60, 60, 45, 0.05); font-family: "JetBrains Mono", monospace;
+      font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em;
+      color: var(--muted); text-align: left; padding: 9px 10px; white-space: nowrap;
+      border-bottom: 1px solid var(--border-strong);
     }
-    table.data td { font-size: 12px; padding: 8px 10px; border-bottom: 1px solid var(--line-soft); vertical-align: top; }
+    table.data td { padding: 8px 10px; border-bottom: 1px solid var(--border); font-size: 12px; vertical-align: top; }
+    table.data tr:last-child td { border-bottom: none; }
     table.data tbody tr:hover td { background: rgba(47, 111, 79, 0.04); }
-    table.data td.mono { font-family: var(--mono); font-size: 11.5px; color: rgba(44, 58, 48, 0.9); white-space: nowrap; }
-    table.data td.clip { max-width: 170px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    table.data td.num { text-align: right; font-family: var(--mono); font-weight: 500; color: var(--green); font-variant-numeric: tabular-nums; white-space: nowrap; }
-    table.data td.empty { text-align: center; color: var(--muted); padding: 36px 0; }
+    .c-regno { font-family: "JetBrains Mono", monospace; font-size: 11.5px; white-space: nowrap; }
+    .c-price { text-align: right; font-family: "JetBrains Mono", "Prompt", monospace; font-size: 12px; font-weight: 500; color: var(--green); white-space: nowrap; }
+    .c-txt { max-width: 190px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .empty-cell { text-align: center; color: var(--muted); height: 96px; }
+    .table-footer { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; padding: 14px 20px 0; }
+    .pager-info { font-family: "JetBrains Mono", monospace; font-size: 11px; color: var(--muted); }
+    .pager { display: flex; align-items: center; gap: 8px; }
+    .pager-page { font-family: "JetBrains Mono", monospace; font-size: 11px; color: var(--muted); }
 
-    .pager { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 12px; flex-wrap: wrap; }
-    .pager .pg-info { font-family: var(--mono); font-size: 11px; color: var(--muted); }
-    .pager .pg-btns { display: flex; align-items: center; gap: 8px; }
-    .pager .pg-cur { font-family: var(--mono); font-size: 11px; color: var(--muted); }
+    /* ============ misc ============ */
+    .empty-chart { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; height: 240px; color: var(--muted); }
+    .empty-glyph { font-family: "JetBrains Mono", monospace; font-size: 26px; opacity: 0.4; }
+    .empty-label { font-size: 12.5px; }
+    .empty-mini { display: flex; align-items: center; justify-content: center; height: 100%; font-family: "JetBrains Mono", monospace; color: var(--muted); opacity: 0.4; font-size: 22px; }
+    footer.site {
+      display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px;
+      padding-top: 20px; border-top: 1px solid var(--border);
+      font-family: "JetBrains Mono", monospace; font-size: 10.5px; color: var(--muted);
+    }
+    #toast {
+      position: fixed; bottom: 18px; left: 50%; transform: translateX(-50%); z-index: 99;
+      background: var(--text); color: #f2f0e6; font-size: 12.5px; padding: 9px 16px;
+      border-radius: 6px; opacity: 0; pointer-events: none; transition: opacity 0.2s; max-width: 90vw;
+    }
+    #toast.show { opacity: 1; }
+    #toast.err { background: #7c2d20; }
 
-    /* ---------- footer ---------- */
-    footer { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; border-top: 1px solid var(--line-soft); padding-top: 18px; font-family: var(--mono); font-size: 10.5px; color: var(--muted); }
-
-    /* ============ print (Export PDF: A4 landscape) ============ */
-    #printReport { display: none; }
-
+    /* ============ พื้นที่รายงาน (แสดงเฉพาะตอนพิมพ์ = PDF) ============ */
+    #print-area { display: none; }
     @media print {
-      @page { size: A4 landscape; margin: 10mm 9mm 12mm 9mm; }
-      html, body { background: #fff !important; }
-      body { font-family: var(--sans); color: #1f2a22; }
-      #app { display: none !important; }
-      #printReport { display: block !important; }
-
-      #printHeader { background: #2f6f4f; color: #fff; border-radius: 3px; padding: 8px 12px; }
-      #printHeader h1 { margin: 0; font-size: 15pt; font-weight: 600; }
-      #printHeader p { margin: 3px 0 0; font-size: 8pt; font-family: var(--mono); opacity: 0.85; }
-      #printSummary { font-size: 8.5pt; margin: 8px 0 0; }
-      #printFilters { font-size: 8pt; color: #4a544a; margin: 4px 0 0; overflow-wrap: anywhere; }
-      #printTable { width: 100%; border-collapse: collapse; table-layout: fixed; margin-top: 6px; }
-      #printTable thead { display: table-header-group; }
-      #printTable th {
-        background: #2f6f4f; color: #fff; font-family: var(--mono); font-size: 7pt; font-weight: 500;
-        text-align: left; padding: 3px 4px; border: 0.4pt solid #2f6f4f;
+      body { background: #fff; }
+      #app, #toast { display: none !important; }
+      #print-area { display: block; }
+      @page { size: A4 landscape; margin: 10mm 9mm 13mm 9mm; }
+      .report-head {
+        background: #2f6f4f; color: #fff; padding: 6mm 6mm; border-radius: 1.5mm;
+        -webkit-print-color-adjust: exact; print-color-adjust: exact;
+        display: flex; justify-content: space-between; align-items: flex-start; gap: 10mm;
       }
-      #printTable td {
-        font-size: 7.5pt; padding: 2.5px 4px; border-bottom: 0.5pt solid #cfc9b4;
-        vertical-align: top; overflow-wrap: anywhere; word-break: break-word;
+      .report-head h1 { font-size: 15pt; font-weight: 600; }
+      .report-head p { font-size: 8pt; opacity: 0.92; margin-top: 1mm; }
+      .report-head .created { text-align: right; font-size: 8pt; white-space: nowrap; }
+      .report-summary { font-size: 9pt; margin: 4mm 0 2mm; color: #263c31; }
+      .report-filters { font-size: 8.5pt; color: #5a6458; margin-bottom: 3mm; word-wrap: break-word; overflow-wrap: break-word; }
+      .report-table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+      .report-table th {
+        background: #2f6f4f; color: #fff; font-size: 6.8pt; font-weight: 500; text-align: left;
+        padding: 1.8mm 1.2mm; border: 0.2mm solid #2f6f4f;
+        -webkit-print-color-adjust: exact; print-color-adjust: exact;
       }
-      #printTable td.num { text-align: right; font-family: var(--mono); font-variant-numeric: tabular-nums; white-space: nowrap; }
-      #printTable tr:nth-child(even) td { background: #f3f1e6; }
-      #printTable tbody tr { break-inside: avoid; }
-      #printFooter { font-size: 7pt; color: #7a8066; margin-top: 7px; font-family: var(--mono); }
+      .report-table td {
+        font-size: 7.2pt; padding: 1.4mm 1.2mm; border: 0.2mm solid #c9c4ae;
+        word-wrap: break-word; overflow-wrap: break-word; vertical-align: top;
+      }
+      .report-table tbody tr:nth-child(even) td { background: #f2efe4; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+      .report-table thead { display: table-header-group; }
+      .report-table tbody tr { page-break-inside: avoid; }
+      .report-price { text-align: right; }
+      .report-note { font-size: 8pt; color: #5a6458; margin-top: 3mm; }
+      .report-foot {
+        position: fixed; bottom: 0; left: 9mm; right: 9mm;
+        display: flex; justify-content: space-between;
+        font-size: 7.5pt; color: #84887a; border-top: 0.2mm solid #d8d4c2; padding-top: 1.5mm;
+      }
     }
   </style>
 </head>
 <body>
 
+  <!-- ===================== หน้าจอปกติ ===================== -->
   <div id="app">
-    <header>
-      <div class="wrap hrow">
-        <div class="brand">
-          <div class="brand-mark">$_</div>
+
+    <header class="top">
+      <div class="top-inner">
+        <div class="logo">
+          <div class="logo-mark">$_</div>
           <div>
-            <p class="brand-title">ราคาเสนอ<em>/terminal</em></p>
-            <p class="brand-sub" id="sheetRef">sheet://1UtSyr…NRxcw · sheet99</p>
+            <div class="logo-title">ราคาเสนอ<span class="accent">/</span>terminal</div>
+            <div class="logo-sub">sheet://1UtSyr…NRxcw · sheet99</div>
           </div>
         </div>
-        <div class="hactions">
-          <div class="status" id="statusPill"><span class="dot" id="statusDot"></span><span id="statusText">connecting…</span></div>
-
-          <div class="menu-wrap">
-            <button type="button" class="btn btn-sm" id="exportBtn" data-act="toggle-export" disabled>
-              <span id="exportBtnLabel">Export</span> <span class="chev">▾</span>
-            </button>
-            <div class="menu" id="exportMenu" hidden>
-              <button type="button" class="menu-item" data-act="export-csv">
-                <b>Export CSV</b>
-                <span id="csvHint">ทุกแถวที่ถูกกรอง</span>
-              </button>
-              <button type="button" class="menu-item" data-act="export-pdf">
-                <b>Export PDF</b>
-                <span>รายงาน A4 แนวนอน · แสดงสูงสุด 500 แถวแรก · เรียงเลขทะเบียนคุม</span>
-              </button>
-            </div>
+        <div class="top-actions">
+          <div class="status">
+            <span class="dot gray" id="status-dot"></span>
+            <span class="status-label" id="status-label">connecting…</span>
           </div>
-
-          <button type="button" class="btn btn-sm" data-act="refresh">⟳ ซิงก์ใหม่</button>
+          <button type="button" class="btn btn-sm" id="btn-csv">⭳ Export CSV</button>
+          <button type="button" class="btn btn-sm" id="btn-pdf">⭳ Export PDF</button>
+          <button type="button" class="btn btn-sm" id="btn-refresh">⟳ ซิงก์ใหม่</button>
         </div>
       </div>
     </header>
 
-    <main class="wrap stack">
-      <div class="alert" id="errorBanner" hidden>
-        <span class="a-icon">▲</span>
-        <span class="a-msg" id="errorMsg"></span>
-        <button type="button" class="a-close" data-act="dismiss-error" aria-label="ปิด">✕</button>
+    <main>
+      <div class="banner" id="error-banner" hidden>
+        <span class="banner-text" id="error-text"></span>
+        <button type="button" class="close-x" id="error-close" aria-label="ปิด">✕</button>
       </div>
 
-      <!-- 01 filters -->
+      <!-- 01 — ตัวกรอง -->
       <section>
-        <div class="sec" style="margin-bottom:12px">
-          <span class="i">// 01</span><span class="c">FILTERS</span><h2>ตัวกรองข้อมูล</h2>
+        <div class="sec-head">
+          <span class="sec-index">// 01</span>
+          <span class="sec-code">FILTERS</span>
+          <h2 class="sec-title">ตัวกรองข้อมูล</h2>
         </div>
-        <div class="filters">
-          <div class="filter-grid" id="filterGrid"></div>
-          <div class="daterow">
-            <span class="d-label"><code>[DAT]</code><span>ช่วงเวลา</span></span>
-            <input type="date" id="dateFrom" aria-label="จากวันที่">
-            <span class="d-arrow">→</span>
-            <input type="date" id="dateTo" aria-label="ถึงวันที่">
-            <button type="button" class="btn btn-ghost btn-sm" id="dateClearBtn" data-act="clear-date-range" hidden>ล้างช่วงเวลา</button>
+        <div class="card filters-panel">
+          <div class="filter-grid" id="filter-grid"></div>
+          <div class="filter-meta">
+            <span class="lbl-mono">[DAT]</span>
+            <span class="lbl">ช่วงเวลา</span>
+            <input type="date" id="date-from" aria-label="จากวันที่">
+            <span class="date-sep">→</span>
+            <input type="date" id="date-to" aria-label="ถึงวันที่">
+            <button type="button" class="btn btn-ghost btn-sm" id="btn-clear-range" hidden>ล้างช่วงเวลา</button>
           </div>
-          <div class="chips-row" id="chipsRow"></div>
+          <div class="chips-row">
+            <span class="active-label" id="active-count">active <span>0</span>/10</span>
+            <span id="chips"></span>
+            <button type="button" class="btn btn-ghost btn-sm" id="btn-clear-all" hidden>ล้างทั้งหมด</button>
+          </div>
         </div>
       </section>
 
-      <!-- 02 KPIs -->
+      <!-- 02 — ภาพรวม -->
       <section>
-        <div class="sec" style="margin-bottom:12px">
-          <span class="i">// 02</span><span class="c">SUMMARY</span><h2>ภาพรวม</h2>
+        <div class="sec-head">
+          <span class="sec-index">// 02</span>
+          <span class="sec-code">SUMMARY</span>
+          <h2 class="sec-title">ภาพรวม</h2>
         </div>
-        <div class="kpi-grid" id="kpiGrid"></div>
+        <div class="kpi-grid">
+          <div class="kpi">
+            <div class="kpi-label">$ total</div>
+            <div class="kpi-value" id="kpi-total">—</div>
+            <div class="kpi-cap" id="kpi-total-cap">—</div>
+          </div>
+          <div class="kpi">
+            <div class="kpi-label">$ records</div>
+            <div class="kpi-value" id="kpi-records">—</div>
+            <div class="kpi-cap" id="kpi-records-cap">…</div>
+          </div>
+          <div class="kpi">
+            <div class="kpi-label">$ agencies</div>
+            <div class="kpi-value" id="kpi-agencies">—</div>
+            <div class="kpi-cap" id="kpi-agencies-cap">หน่วยงานที่เกี่ยวข้อง</div>
+          </div>
+          <div class="kpi">
+            <div class="kpi-label">$ avg/row</div>
+            <div class="kpi-value" id="kpi-avg">—</div>
+            <div class="kpi-cap" id="kpi-avg-cap">ค่าเฉลี่ยต่อรายการ</div>
+          </div>
+        </div>
       </section>
 
-      <!-- 03 main chart -->
+      <!-- 03 — กราฟหลัก -->
       <section>
-        <div class="sec" style="margin-bottom:12px">
-          <span class="i">// 03</span><span class="c">PRICE</span><h2>ยอดรวมราคาเสนอ</h2>
+        <div class="sec-head">
+          <span class="sec-index">// 03</span>
+          <span class="sec-code">PRICE</span>
+          <h2 class="sec-title">ยอดรวมราคาเสนอ</h2>
         </div>
         <div class="card">
-          <div class="card-head">
+          <div class="chart-head">
             <div>
-              <h3 id="mainChartTitle">ยอดรวมราคาเสนอ จำแนกตาม เดือน</h3>
-              <p class="cap" id="mainChartCap">group by MON · top 12</p>
+              <div class="chart-title" id="main-chart-title"></div>
+              <div class="chart-sub" id="main-chart-sub"></div>
             </div>
-            <div class="dim-switch" id="dimSwitch"></div>
+            <div class="gb-btns" id="groupby-btns"></div>
           </div>
-          <div id="mainChart"></div>
+          <div id="main-chart"></div>
         </div>
       </section>
 
-      <!-- 04 secondary charts -->
-      <div class="chart-grid2">
-        <section>
-          <div class="card" style="height:100%">
-            <div class="card-head">
-              <div>
-                <h3>สัดส่วนตามหมวด</h3>
-                <p class="cap">group by CAT · share of total</p>
-              </div>
-            </div>
-            <div id="donutChart"></div>
-          </div>
-        </section>
-        <section>
-          <div class="card" style="height:100%">
-            <div class="card-head">
-              <div>
-                <h3>TOP 10 หน่วยงาน</h3>
-                <p class="cap">group by AGT · sum ราคาเสนอ</p>
-              </div>
-            </div>
-            <div id="agencyChart"></div>
-          </div>
-        </section>
-      </div>
-
+      <!-- 04 — กราฟรอง -->
       <section>
-        <div class="card">
-          <div class="card-head">
-            <div>
-              <h3>สถิติแยกตามประเภทแผน</h3>
-              <p class="cap">group by PLN · ในแผน / นอกแผน / ทดแทน · sum ราคาเสนอ</p>
+        <div class="sec-head">
+          <span class="sec-index">// 04</span>
+          <span class="sec-code">BREAKDOWN</span>
+          <h2 class="sec-title">รายละเอียดเพิ่มเติม</h2>
+        </div>
+        <div class="grid-5">
+          <div class="card card-body">
+            <div class="chart-title">สัดส่วนตามหมวด</div>
+            <div class="chart-sub">group by CAT · share of total</div>
+            <div class="donut-wrap" style="margin-top:14px;">
+              <div class="donut" id="donut">
+                <span class="donut-center"><span class="v" id="donut-total">—</span><span class="c">ยอดรวม</span></span>
+              </div>
+              <ul class="donut-legend" id="donut-legend"></ul>
             </div>
           </div>
-          <div id="planChart"></div>
+          <div class="card card-body">
+            <div class="chart-title">TOP 10 หน่วยงาน</div>
+            <div class="chart-sub">group by AGT · sum ราคาเสนอ</div>
+            <div style="margin-top:14px;" id="agency-chart"></div>
+          </div>
+          <div class="card card-body full">
+            <div class="chart-title">สถิติแยกตามประเภทแผน</div>
+            <div class="chart-sub">group by PLN · ในแผน / นอกแผน / ทดแทน · sum ราคาเสนอ</div>
+            <div class="plan-grid" id="plan-breakdown" style="margin-top:14px;"></div>
+          </div>
         </div>
       </section>
 
-      <!-- 05 table -->
+      <!-- 05 — ตาราง -->
       <section>
-        <div class="sec" style="margin-bottom:12px">
-          <span class="i">// 05</span><span class="c">ROWS</span><h2>ข้อมูลทั้งหมด</h2>
+        <div class="sec-head">
+          <span class="sec-index">// 05</span>
+          <span class="sec-code">ROWS</span>
+          <h2 class="sec-title">ข้อมูลทั้งหมด</h2>
         </div>
-        <div class="card">
-          <div id="tableWrap"></div>
+        <div class="card table-card">
+          <div class="table-toolbar">
+            <span class="rows-label" id="table-rows-label"></span>
+            <select class="sort-select" id="sort-select" aria-label="เรียงตาม">
+              <option value="price-desc">ราคาเสนอ ▾ (มาก → น้อย)</option>
+              <option value="price-asc">ราคาเสนอ ▴ (น้อย → มาก)</option>
+              <option value="regNo">เลขทะเบียนคุม</option>
+              <option value="date">เดือน (ใหม่ล่าสุด)</option>
+              <option value="agency">หน่วยงาน (ก–ฮ)</option>
+            </select>
+          </div>
+          <div class="table-scroll">
+            <table class="data">
+              <thead>
+                <tr>
+                  <th>เลขทะเบียนคุม</th><th>เดือน</th><th>กลุ่มภารกิจ</th><th>กลุ่มงาน</th><th>หน่วยงาน</th>
+                  <th>รายการ</th><th>หมวด</th><th>ประเภท</th><th>ประเภทแผน</th><th>ราคาเสนอ</th>
+                </tr>
+              </thead>
+              <tbody id="table-body"></tbody>
+            </table>
+          </div>
+          <div class="table-footer">
+            <span class="pager-info" id="table-pager-info"></span>
+            <div class="pager">
+              <button type="button" class="btn btn-sm" id="btn-prev">‹ ก่อนหน้า</button>
+              <span class="pager-page" id="table-pager-page"></span>
+              <button type="button" class="btn btn-sm" id="btn-next">ถัดไป ›</button>
+            </div>
+          </div>
         </div>
       </section>
 
-      <footer>
+      <footer class="site">
         <span>ราคาเสนอ/terminal · interactive data dashboard</span>
-        <span id="footerRight">sheet://1UtSyr…NRxcw · sheet99 · อัปเดตล่าสุด —</span>
+        <span>sheet://1UtSyr…NRxcw · sheet99 · อัปเดตล่าสุดจาก Google Sheets</span>
       </footer>
     </main>
   </div>
 
-  <!-- export PDF report (visible only when printing) -->
-  <div id="printReport"></div>
-
-  <!-- filter popover -->
-  <div id="popoverBackdrop" data-act="close-popover"></div>
-  <div id="popover">
-    <div class="pop-head"><input id="popoverSearch" type="text" placeholder="ค้นหา…" autocomplete="off"></div>
-    <div class="pop-list" id="popoverList"></div>
-    <div class="pop-foot">เลือกได้หลายค่า · คลิกเพื่อเลือก/ยกเลิก</div>
+  <!-- ===================== พื้นที่รายงาน PDF (พิมพ์) ===================== -->
+  <div id="print-area">
+    <div class="report-head">
+      <div>
+        <h1 id="print-title"></h1>
+        <p id="print-sub"></p>
+      </div>
+      <div class="created" id="print-created"></div>
+    </div>
+    <div class="report-summary" id="print-summary"></div>
+    <div class="report-filters" id="print-filters"></div>
+    <table class="report-table">
+      <colgroup>
+        <col style="width:8.5%"><col style="width:8%"><col style="width:11.5%"><col style="width:10%"><col style="width:10.5%">
+        <col style="width:16.5%"><col style="width:8%"><col style="width:8.5%"><col style="width:6.5%"><col style="width:12%">
+      </colgroup>
+      <thead>
+        <tr>
+          <th>เลขทะเบียนคุม</th><th>เดือน</th><th>กลุ่มภารกิจ</th><th>กลุ่มงาน</th><th>หน่วยงาน</th>
+          <th>รายการ</th><th>หมวด</th><th>ประเภท</th><th>ประเภทแผน</th><th>ราคาเสนอ</th>
+        </tr>
+      </thead>
+      <tbody id="print-table-body"></tbody>
+    </table>
+    <div class="report-note" id="print-note"></div>
+    <div class="report-foot">
+      <span>ราคาเสนอ/terminal — รายงานข้อมูล</span>
+      <span>sheet://1UtSyr…NRxcw · sheet99</span>
+    </div>
   </div>
 
+  <div id="toast"></div>
+
   <script>
-  (function () {
-    "use strict";
+    /* ================================================================
+       ราคาเสนอ/terminal — frontend สำหรับ Google Apps Script
+       - ไม่ใช้ CDN สคริปต์ภายนอก (CSP ของ HtmlService บล็อก) —
+         กราฟวาดด้วย CSS ล้วน, PDF ใช้ window.print() แบบ A4 แนวนอน
+       ================================================================ */
 
-    /* ================= constants ================= */
+    // ---------- ค่าคงที่ ----------
     var DIMENSIONS = [
-      { key: "regNo",    label: "เลขทะเบียนคุม", code: "REG" },
-      { key: "monthKey", label: "เดือน",         code: "MON" },
-      { key: "mission",  label: "กลุ่มภารกิจ",   code: "MIS" },
-      { key: "workGroup",label: "กลุ่มงาน",      code: "WRK" },
-      { key: "agency",   label: "หน่วยงาน",      code: "AGT" },
-      { key: "item",     label: "รายการ",        code: "ITM" },
-      { key: "category", label: "หมวด",          code: "CAT" },
-      { key: "type",     label: "ประเภท",        code: "TYP" },
-      { key: "planType", label: "ประเภทแผน",     code: "PLN" },
+      { key: "regNo", code: "REG", label: "เลขทะเบียนคุม" },
+      { key: "monthKey", code: "MON", label: "เดือน" },
+      { key: "mission", code: "MIS", label: "กลุ่มภารกิจ" },
+      { key: "workGroup", code: "WRK", label: "กลุ่มงาน" },
+      { key: "agency", code: "AGT", label: "หน่วยงาน" },
+      { key: "item", code: "ITM", label: "รายการ" },
+      { key: "category", code: "CAT", label: "หมวด" },
+      { key: "type", code: "TYP", label: "ประเภท" },
+      { key: "planType", code: "PLN", label: "ประเภทแผน" }
     ];
-    var DIM_MAP = {};
-    DIMENSIONS.forEach(function (d) { DIM_MAP[d.key] = d; });
+    var DIMENSION_MAP = {};
+    DIMENSIONS.forEach(function (d) { DIMENSION_MAP[d.key] = d; });
 
-    var THAI_MONTHS = ["ม.ค.","ก.พ.","มี.ค.","เม.ย.","พ.ค.","มิ.ย.","ก.ค.","ส.ค.","ก.ย.","ต.ค.","พ.ย.","ธ.ค."];
+    var THAI_MONTHS = [
+      "ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย.",
+      "ก.ค.", "ส.ค.", "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค."
+    ];
+    var PALETTE = ["#2f6f4f", "#3d7f5a", "#4f916a", "#6aa682", "#8bbd9d", "#aecfba", "#c9d8cd", "#7aa98a"];
+    var AMBER = "#a16207";
     var PLAN_ORDER = ["ในแผน", "นอกแผน", "ทดแทน"];
     var PLAN_COLORS = { "ในแผน": "#2f6f4f", "นอกแผน": "#a16207", "ทดแทน": "#7a8a7f" };
-    var PALETTE = ["#2f6f4f","#3d7f5a","#4f916a","#6aa682","#8bbd9d","#aecfba","#c9d8cd","#7aa98a"];
-    var AMBER = "#a16207";
+    var PAGE_SIZE = 20;
+    var MAX_PDF_ROWS = 500;
+    var EXPORT_HEADERS = ["เลขทะเบียนคุม", "เดือน", "กลุ่มภารกิจ", "กลุ่มงาน", "หน่วยงาน", "รายการ", "หมวด", "ประเภท", "ประเภทแผน", "ราคาเสนอ"];
 
-    var TABLE_PAGE_SIZE = 20;
-    var PRINT_MAX_ROWS = 500;
-    var MAX_MAIN_GROUPS = 12;
-    var MAX_CATEGORY_GROUPS = 7;
-    var TOP_AGENCIES = 10;
+    // ---------- state ----------
+    var state = {
+      rows: [],
+      loaded: false,
+      syncing: false,
+      error: null,
+      filters: {},      // key -> [ค่า ที่เลือก]
+      dateFrom: "",
+      dateTo: "",
+      groupBy: "monthKey",
+      sortKey: "price-desc",
+      page: 1
+    };
 
-    var EXPORT_HEADERS = ["เลขทะเบียนคุม","เดือน","กลุ่มภารกิจ","กลุ่มงาน","หน่วยงาน","รายการ","หมวด","ประเภท","ประเภทแผน","ราคาเสนอ"];
+    // ---------- utilities ----------
+    function $id(id) { return document.getElementById(id); }
+    function fmtNum(n) { return Math.round(n).toLocaleString("en-US"); }
+    function fmtBaht(n) { return "฿" + fmtNum(n); }
+    var nfCompact = new Intl.NumberFormat("en-US", { notation: "compact", maximumFractionDigits: 1 });
+    function fmtCompact(n) { return "฿" + nfCompact.format(n); }
+    function truncate(s, n) { return s.length > n ? s.slice(0, n) + "…" : s; }
+    function monthIdx(name) { return THAI_MONTHS.indexOf(name); }
 
-    /* ================= state ================= */
-    var ALL_ROWS = [];
-    var META = null;
-    var loaded = false;
-    var loading = false;
-    var loadError = null;
-    var filters = {};          // key -> array of selected values
-    var dateRange = { from: "", to: "" };  // ช่วงเวลา (ISO yyyy-mm-dd)
-    var groupByKey = "monthKey";
-    var tableSort = "price-desc";
-    var tablePage = 1;
-    var exportOpen = false;
-    var popover = { open: false, key: null, search: "" };
-
-    /* ================= helpers ================= */
-    function $(sel) { return document.querySelector(sel); }
-
-    var nf = new Intl.NumberFormat("en-US");
-    var nfC = new Intl.NumberFormat("en-US", { notation: "compact", maximumFractionDigits: 1 });
-    function fmtNum(n) { return nf.format(n); }
-    function fmtBaht(n) { return "฿" + nf.format(n); }
-    function fmtCompact(n) { return "฿" + nfC.format(n); }
-
-    function esc(s) {
-      return String(s === null || s === undefined ? "" : s).replace(/[&<>"']/g, function (c) {
-        return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
-      });
-    }
-    function truncate(s, n) { s = String(s); return s.length > n ? s.slice(0, n) + "…" : s; }
-    function dateStamp() {
-      var d = new Date();
-      var p = function (n) { return String(n).padStart(2, "0"); };
-      return d.getFullYear() + "-" + p(d.getMonth() + 1) + "-" + p(d.getDate());
-    }
-    function thaiDateTime(d) {
-      var p = function (n) { return String(n).padStart(2, "0"); };
-      return d.getDate() + " " + THAI_MONTHS[d.getMonth()] + " " + (d.getFullYear() + 543) + ", " + p(d.getHours()) + ":" + p(d.getMinutes()) + " น.";
+    function monthOrderOf(key) {
+      var m = String(key).match(/^(\S+)\s+(\d{4})$/);
+      if (!m) return Number.MAX_SAFE_INTEGER;
+      var idx = monthIdx(m[1]);
+      return Number(m[2]) * 12 + (idx >= 0 ? idx : 0);
     }
 
-    /* ---- data logic (mirrors src/lib/sheet.ts) ---- */
-    function filterRows(rows, flt, excludeKey) {
-      var keys = Object.keys(flt);
-      var range = dateRange;
-      var hasRange = !!(range && (range.from || range.to));
-      if (keys.length === 0 && !hasRange) return rows;
-      return rows.filter(function (row) {
-        if (hasRange) {
-          var dkey = dateKeyOf(row.date);
-          if (dkey === null) return false;
-          if (range.from) {
-            var fromKey = dateKeyOf(range.from);
-            if (fromKey !== null && dkey < fromKey) return false;
-          }
-          if (range.to) {
-            var toKey = dateKeyOf(range.to);
-            if (toKey !== null && dkey > toKey) return false;
-          }
-        }
-        return keys.every(function (key) {
-          if (key === excludeKey) return true;
-          var values = flt[key];
-          return !values || values.length === 0 || values.indexOf(row[key]) !== -1;
-        });
-      });
-    }
-
-    function monthOrderOf(monthKey) {
-      // รองรับทั้ง "19 ก.ย. 2025" (คอลัมน์ เดือน เต็ม) และ "ก.ย. 2025" (monthKey)
-      var m = String(monthKey).match(/^(\d{1,2})\s+(\S+)\s+(\d{4})$/);
-      if (m) {
-        var idx = THAI_MONTHS.indexOf(m[2]);
-        if (idx >= 0) return Number(m[3]) * 12 + idx;
-      }
-      m = String(monthKey).match(/^(\S+)\s+(\d{4})$/);
-      if (m) {
-        var idx2 = THAI_MONTHS.indexOf(m[1]);
-        if (idx2 >= 0) return Number(m[2]) * 12 + idx2;
-      }
-      return Number.MAX_SAFE_INTEGER;
-    }
-
-    // "19 ก.ย. 2025" / "ก.ย. 2025" / "2025-09-19" -> yyyymmdd (number) / null
+    /** แปลง "19 ก.ย. 2025" / "ก.ย. 2025" / "2025-09-19" เป็นตัวเลข yyyymmdd สำหรับเปรียบเทียบช่วงเวลา */
     function dateKeyOf(value) {
-      var s = String(value).trim();
-      var m = s.match(/^(\d{1,2})\s+(\S+)\s+(\d{4})$/);
-      if (m) {
-        var idx = THAI_MONTHS.indexOf(m[2]);
-        if (idx >= 0) return Number(m[3]) * 10000 + (idx + 1) * 100 + Number(m[1]);
-      }
+      var s = String(value).trim(), m, idx;
+      m = s.match(/^(\d{1,2})\s+(\S+)\s+(\d{4})$/);
+      if (m) { idx = monthIdx(m[2]); if (idx >= 0) return Number(m[3]) * 10000 + (idx + 1) * 100 + Number(m[1]); }
       m = s.match(/^(\S+)\s+(\d{4})$/);
-      if (m) {
-        var idx2 = THAI_MONTHS.indexOf(m[1]);
-        if (idx2 >= 0) return Number(m[2]) * 10000 + (idx2 + 1) * 100 + 1;
-      }
+      if (m) { idx = monthIdx(m[1]); if (idx >= 0) return Number(m[2]) * 10000 + (idx + 1) * 100 + 1; }
       m = s.match(/^(\d{4})-(\d{2})-(\d{2})$/);
       if (m) return Number(m[1]) * 10000 + Number(m[2]) * 100 + Number(m[3]);
       return null;
     }
 
-    // "2025-01-19" -> "19 ม.ค. 2025" (chips / PDF filter line)
     function isoToThai(iso) {
       var m = String(iso).match(/^(\d{4})-(\d{2})-(\d{2})$/);
       if (!m) return String(iso);
       return Number(m[3]) + " " + THAI_MONTHS[Number(m[2]) - 1] + " " + m[1];
     }
 
-    function uniqueValues(rows, key) {
-      var counts = new Map();
-      for (var i = 0; i < rows.length; i++) {
-        var v = rows[i][key];
-        if (v === "") continue;
-        counts.set(v, (counts.get(v) || 0) + 1);
-      }
-      var options = [];
-      counts.forEach(function (count, value) { options.push({ value: value, count: count }); });
+    function regNoNum(v) {
+      var m = String(v).match(/(\d+)\s*$/);
+      return m ? Number(m[1]) : 0;
+    }
+
+    function sum(rows) {
+      return rows.reduce(function (s, r) { return s + r.price; }, 0);
+    }
+
+    // ---------- การกรอง ----------
+    function filterRows(rows, filters, dateFrom, dateTo, excludeKey) {
+      var keys = DIMENSIONS.map(function (d) { return d.key; }).filter(function (k) { return k !== excludeKey; });
+      var hasRange = !!(dateFrom || dateTo);
+      if (keys.every(function (k) { return !filters[k] || filters[k].length === 0; }) && !hasRange) return rows;
+      return rows.filter(function (row) {
+        if (hasRange) {
+          var k = dateKeyOf(row.date);
+          if (k === null) return false;
+          if (dateFrom) { var fk = dateKeyOf(dateFrom); if (fk !== null && k < fk) return false; }
+          if (dateTo) { var tk = dateKeyOf(dateTo); if (tk !== null && k > tk) return false; }
+        }
+        for (var i = 0; i < keys.length; i++) {
+          var key = keys[i];
+          var sel = filters[key];
+          if (sel && sel.length && sel.indexOf(row[key]) === -1) return false;
+        }
+        return true;
+      });
+    }
+
+    function filteredRows() {
+      return filterRows(state.rows, state.filters, state.dateFrom, state.dateTo, null);
+    }
+
+    /** ค่าที่เป็นไปได้ของมิติ (นับจากแถวที่ผ่านตัวกรองอื่น) */
+    function optionList(key) {
+      var rows = filterRows(state.rows, state.filters, state.dateFrom, state.dateTo, key);
+      var counts = {};
+      rows.forEach(function (r) {
+        var v = r[key];
+        if (v === "") return;
+        counts[v] = (counts[v] || 0) + 1;
+      });
+      var opts = Object.keys(counts).map(function (v) { return { value: v, count: counts[v] }; });
       if (key === "monthKey") {
-        options.sort(function (a, b) { return monthOrderOf(a.value) - monthOrderOf(b.value); });
+        opts.sort(function (a, b) { return monthOrderOf(a.value) - monthOrderOf(b.value); });
       } else {
-        options.sort(function (a, b) { return String(a.value).localeCompare(String(b.value), "th"); });
+        opts.sort(function (a, b) { return a.value.localeCompare(b.value, "th"); });
       }
-      return options;
+      return opts;
     }
 
     function groupBySum(rows, key) {
-      var map = new Map();
-      for (var i = 0; i < rows.length; i++) {
-        var row = rows[i];
-        var name = row[key] || "(ไม่มีข้อมูล)";
-        var g = map.get(name);
-        if (g) { g.sum += row.price; g.count += 1; }
-        else map.set(name, { name: name, sum: row.price, count: 1 });
-      }
-      var groups = [];
-      map.forEach(function (g) { groups.push(g); });
-      groups.sort(function (a, b) { return b.sum - a.sum; });
+      var map = {};
+      rows.forEach(function (r) {
+        var name = r[key] || "(ไม่มีข้อมูล)";
+        if (!map[name]) map[name] = { name: name, sum: 0, count: 0 };
+        map[name].sum += r.price;
+        map[name].count += 1;
+      });
+      var groups = Object.keys(map).map(function (k) { return map[k]; });
       if (key === "monthKey") {
         groups.sort(function (a, b) { return monthOrderOf(a.name) - monthOrderOf(b.name); });
+      } else {
+        groups.sort(function (a, b) { return b.sum - a.sum; });
       }
       return groups;
     }
@@ -716,682 +702,662 @@
       var rest = groups.slice(n);
       top.push({
         name: "อื่นๆ",
-        sum: rest.reduce(function (acc, g) { return acc + g.sum; }, 0),
-        count: rest.reduce(function (acc, g) { return acc + g.count; }, 0),
+        sum: rest.reduce(function (a, g) { return a + g.sum; }, 0),
+        count: rest.reduce(function (a, g) { return a + g.count; }, 0)
       });
       return top;
     }
 
-    function compareRegNo(a, b) {
-      var na = Number(String(a).match(/(\d+)\s*$/));
-      var nb = Number(String(b).match(/(\d+)\s*$/));
-      if (isFinite(na) && isFinite(nb) && na !== nb) return na - nb;
-      return String(a).localeCompare(String(b), "th");
-    }
-
-    function totalSum(rows) {
-      var s = 0;
-      for (var i = 0; i < rows.length; i++) s += rows[i].price;
-      return s;
-    }
-
-    function activeFilterEntries() {
-      var out = [];
-      DIMENSIONS.forEach(function (d) {
-        var v = filters[d.key];
-        if (v && v.length) out.push([d.key, v]);
-      });
-      return out;
-    }
-
-    function setFilter(key, value) {
-      if (!value || value.length === 0) delete filters[key];
-      else filters[key] = value;
-    }
-
-    /* ================= rendering ================= */
-    function render() {
-      var filtered = filterRows(ALL_ROWS, filters);
-      var total = totalSum(filtered);
-      var agencies = new Set(filtered.map(function (r) { return r.agency; })).size;
-      var avg = filtered.length ? total / filtered.length : 0;
-
-      renderFilters();
-      renderChips();
-      renderKpis(total, filtered.length, agencies, avg);
-      renderMainChart(filtered, total);
-      renderDonut(filtered, total);
-      renderAgencies(filtered);
-      renderPlan(filtered, total);
-      renderTable(filtered);
-      renderStatus();
-      renderError();
-      renderExportBtn(filtered.length);
-      renderFooter(filtered.length);
-
-      if (popover.open) {
-        positionPopover();
-        renderPopoverList();
-      }
-    }
-
-    /* ---- filters ---- */
-    function renderFilters() {
-      var grid = document.getElementById("filterGrid");
-      grid.innerHTML = DIMENSIONS.map(function (d) {
-        var sel = filters[d.key] || [];
-        var label = !sel.length ? "ทั้งหมด"
-          : sel.length <= 2 ? esc(sel.join(" · "))
-          : esc(fmtNum(sel.length) + " รายการ");
-        return '<div class="filter">' +
-          '<div class="filter-label"><code>[' + d.code + ']</code><span>' + esc(d.label) + '</span></div>' +
-          '<button type="button" class="filter-btn' + (sel.length ? " active" : "") + '" data-act="open-filter" data-dim="' + d.key + '">' +
-            '<span class="fb-label">' + label + '</span>' +
-            (sel.length > 1 ? '<span class="fb-count">' + sel.length + "</span>" : "") +
-            '<span class="fb-caret">▾</span>' +
-          "</button>" +
-        "</div>";
-      }).join("");
-    }
-
-    function renderChips() {
-      var row = document.getElementById("chipsRow");
-      var entries = activeFilterEntries();
-      var rangeOn = !!(dateRange.from || dateRange.to);
-      var activeCount = entries.length + (rangeOn ? 1 : 0);
-      var html = '<span class="chips-note">active <b>' + activeCount + "</b>/10</span>";
-      entries.forEach(function (entry) {
-        var key = entry[0], values = entry[1];
-        values.forEach(function (value) {
-          html += '<button type="button" class="chip" data-act="remove-chip" data-dim="' + key + '" data-value="' + esc(value) + '">' +
-            "<code>" + DIM_MAP[key].code + "</code><span>" + esc(value) + '</span><span class="chip-x">✕</span></button>';
-        });
-      });
-      if (rangeOn) {
-        html += '<button type="button" class="chip" data-act="clear-date-range">' +
-          "<code>DAT</code><span>" + esc((dateRange.from ? isoToThai(dateRange.from) : "…") + " → " + (dateRange.to ? isoToThai(dateRange.to) : "…")) + '</span><span class="chip-x">✕</span></button>';
-      }
-      if (entries.length || rangeOn) {
-        html += '<button type="button" class="btn btn-ghost btn-sm" data-act="reset-filters">ล้างทั้งหมด</button>';
-      }
-      var clearBtn = document.getElementById("dateClearBtn");
-      if (clearBtn) clearBtn.hidden = !rangeOn;
-      row.innerHTML = html;
-    }
-
-    /* ---- KPIs ---- */
-    function renderKpis(total, count, agencies, avg) {
-      document.getElementById("kpiGrid").innerHTML =
-        kpiCard("$ total", fmtBaht(total), "จาก " + fmtNum(count) + " รายการ") +
-        kpiCard("$ records", fmtNum(count), loaded ? "ทั้งหมด " + fmtNum(ALL_ROWS.length) + " รายการ" : "…") +
-        kpiCard("$ agencies", fmtNum(agencies), "หน่วยงานที่เกี่ยวข้อง") +
-        kpiCard("$ avg/row", fmtBaht(avg), "ค่าเฉลี่ยต่อรายการ");
-    }
-    function kpiCard(k, v, c) {
-      return '<div class="kpi"><p class="k">' + k + '</p><p class="v">' + v + '</p><p class="c">' + esc(c) + "</p></div>";
-    }
-
-    /* ---- main chart ---- */
-    function renderMainChart(filtered, total) {
-      var dim = DIM_MAP[groupByKey];
-      document.getElementById("mainChartTitle").textContent = "ยอดรวมราคาเสนอ จำแนกตาม " + dim.label;
-      document.getElementById("mainChartCap").textContent =
-        "group by " + dim.code + " · top " + MAX_MAIN_GROUPS + " · " + fmtCompact(total);
-      document.getElementById("dimSwitch").innerHTML = DIMENSIONS.map(function (d) {
-        return '<button type="button" class="dim-btn' + (d.key === groupByKey ? " on" : "") + '" data-act="group-by" data-key="' + d.key + '">' + d.code + "</button>";
-      }).join("");
-
-      var box = document.getElementById("mainChart");
-      if (!loaded) { box.innerHTML = loadingBox(); return; }
-      var groups = groupBySum(filtered, groupByKey).slice(0, MAX_MAIN_GROUPS);
-      if (!groups.length) { box.innerHTML = emptyChart("ไม่มีข้อมูลที่ตรงกับตัวกรองปัจจุบัน"); return; }
-
-      var max = groups.reduce(function (m, g) { return Math.max(m, g.sum); }, 0);
-      box.innerHTML = '<div class="bars">' + groups.map(function (g) {
-        var h = max > 0 ? Math.max(2, Math.round((g.sum / max) * 100)) : 2;
-        var showVal = h >= 12;
-        return '<div class="bar-col" title="' + esc(g.name + "\n" + fmtBaht(g.sum) + " · " + fmtNum(g.count) + " รายการ") + '">' +
-          '<div class="bar-track">' +
-            (showVal ? '<span class="bar-val">' + fmtCompact(g.sum) + "</span>" : "") +
-            '<div class="bar' + (g.sum === max ? " amber" : "") + '" style="height:' + h + '%"></div>' +
-          "</div>" +
-          '<span class="bar-label" title="' + esc(g.name) + '">' + esc(truncate(g.name, 14)) + "</span>" +
-        "</div>";
-      }).join("") + "</div>";
-    }
-
-    /* ---- donut ---- */
-    function renderDonut(filtered, total) {
-      var box = document.getElementById("donutChart");
-      if (!loaded) { box.innerHTML = loadingBox(); return; }
-      var groups = topGroups(groupBySum(filtered, "category"), MAX_CATEGORY_GROUPS);
-      if (!groups.length) { box.innerHTML = emptyChart("ไม่มีข้อมูล"); return; }
-
-      var acc = 0;
-      var stops = groups.map(function (g, i) {
-        var color = i < PALETTE.length ? PALETTE[i] : AMBER;
-        var p = total > 0 ? (g.sum / total) * 100 : 0;
-        var from = acc;
-        acc += p;
-        return color + " " + from + "% " + acc + "%";
-      });
-      var legend = groups.map(function (g, i) {
-        var color = i < PALETTE.length ? PALETTE[i] : AMBER;
-        var share = total > 0 ? ((g.sum / total) * 100).toFixed(1) : "0.0";
-        return "<li>" +
-          '<span class="sw" style="background:' + color + '"></span>' +
-          '<span class="lg-name" title="' + esc(g.name) + '">' + esc(g.name) + "</span>" +
-          '<span class="lg-pct">' + share + "%</span>" +
-          '<span class="lg-sum">' + fmtCompact(g.sum) + "</span>" +
-        "</li>";
-      }).join("");
-
-      box.innerHTML = '<div class="donut-wrap">' +
-        '<div class="donut" style="background:conic-gradient(' + stops.join(",") + ')">' +
-          '<div class="donut-center"><span class="dv">' + fmtCompact(total) + '</span><span class="dl">ยอดรวม</span></div>' +
-        "</div>" +
-        '<ul class="legend">' + legend + "</ul>" +
-      "</div>";
-    }
-
-    /* ---- top agencies ---- */
-    function renderAgencies(filtered) {
-      var box = document.getElementById("agencyChart");
-      if (!loaded) { box.innerHTML = loadingBox(); return; }
-      var groups = groupBySum(filtered, "agency").slice(0, TOP_AGENCIES);
-      if (!groups.length) { box.innerHTML = emptyChart("ไม่มีข้อมูล"); return; }
-
-      var max = groups.reduce(function (m, g) { return Math.max(m, g.sum); }, 0);
-      var maxIndex = groups.reduce(function (mi, g, i) { return g.sum > groups[mi].sum ? i : mi; }, 0);
-      box.innerHTML = '<div class="hbar">' + groups.map(function (g, i) {
-        var w = max > 0 ? Math.max(2, (g.sum / max) * 100) : 2;
-        return '<div class="hbar-row">' +
-          '<span class="hbar-name" title="' + esc(g.name) + '">' + esc(truncate(g.name, 24)) + "</span>" +
-          '<div class="hbar-track"><div class="hbar-fill' + (i === maxIndex ? " amber" : "") + '" style="width:' + w + '%"></div></div>' +
-          '<span class="hbar-val">' + fmtCompact(g.sum) + "</span>" +
-        "</div>";
-      }).join("") + "</div>";
-    }
-
-    /* ---- plan breakdown ---- */
-    function renderPlan(filtered, total) {
-      var box = document.getElementById("planChart");
-      if (!loaded) { box.innerHTML = loadingBox(); return; }
-      var byName = new Map(groupBySum(filtered, "planType").map(function (g) { return [g.name, g]; }));
-      var stats = PLAN_ORDER.map(function (name) {
-        return byName.get(name) || { name: name, sum: 0, count: 0 };
-      });
-      var max = Math.max(1, stats.reduce(function (m, s) { return Math.max(m, s.sum); }, 0));
-      box.innerHTML = '<div class="plan-grid">' + stats.map(function (s) {
-        var share = total > 0 ? (s.sum / total) * 100 : 0;
-        var color = PLAN_COLORS[s.name] || "#8bbd9d";
-        return '<div class="plan-card">' +
-          '<div class="plan-head"><span class="plan-dot" style="background:' + color + '"></span><span class="plan-name">' + esc(s.name) + "</span></div>" +
-          '<div class="plan-sum">' + fmtBaht(s.sum) + "</div>" +
-          '<div class="plan-cap">' + fmtNum(s.count) + " รายการ · " + share.toFixed(1) + "% ของยอดรวม</div>" +
-          '<div class="plan-bar"><div class="plan-fill" style="width:' + Math.max(2, (s.sum / max) * 100) + '%;background:' + color + '"></div></div>' +
-        "</div>";
-      }).join("") + "</div>";
-    }
-
-    /* ---- table ---- */
-    var SORT_OPTIONS = [
-      { value: "price-desc", label: "ราคาเสนอ ▾ (มาก → น้อย)" },
-      { value: "price-asc",  label: "ราคาเสนอ ▴ (น้อย → มาก)" },
-      { value: "date",       label: "เดือน (ใหม่ล่าสุด)" },
-      { value: "regNo",      label: "เลขทะเบียนคุม" },
-      { value: "agency",     label: "หน่วยงาน (ก–ฮ)" },
-    ];
-    var COLUMNS = [
-      { key: "regNo",    label: "เลขทะเบียนคุม" },
-      { key: "date",     label: "เดือน" },
-      { key: "mission",  label: "กลุ่มภารกิจ" },
-      { key: "workGroup",label: "กลุ่มงาน" },
-      { key: "agency",   label: "หน่วยงาน" },
-      { key: "item",     label: "รายการ" },
-      { key: "category", label: "หมวด" },
-      { key: "type",     label: "ประเภท" },
-      { key: "planType", label: "ประเภทแผน" },
-      { key: "price",    label: "ราคาเสนอ" },
-    ];
-
     function sortedRows(rows) {
       var copy = rows.slice();
-      switch (tableSort) {
-        case "price-desc": copy.sort(function (a, b) { return b.price - a.price; }); break;
-        case "price-asc":  copy.sort(function (a, b) { return a.price - b.price; }); break;
-        case "regNo":      copy.sort(function (a, b) { return String(a.regNo).localeCompare(String(b.regNo), "th"); }); break;
-        case "date":       copy.sort(function (a, b) { return monthOrderOf(b.date) - monthOrderOf(a.date) || String(b.date).localeCompare(String(a.date), "th"); }); break;
-        case "agency":     copy.sort(function (a, b) { return String(a.agency).localeCompare(String(b.agency), "th"); }); break;
-      }
+      var k = state.sortKey;
+      if (k === "price-desc") copy.sort(function (a, b) { return b.price - a.price; });
+      else if (k === "price-asc") copy.sort(function (a, b) { return a.price - b.price; });
+      else if (k === "regNo") copy.sort(function (a, b) { return regNoNum(a.regNo) - regNoNum(b.regNo) || a.regNo.localeCompare(b.regNo, "th"); });
+      else if (k === "date") copy.sort(function (a, b) { return (b.monthOrder - a.monthOrder) || b.date.localeCompare(a.date); });
+      else if (k === "agency") copy.sort(function (a, b) { return a.agency.localeCompare(b.agency, "th"); });
       return copy;
     }
 
-    function renderTable(filtered) {
-      var wrap = document.getElementById("tableWrap");
-      if (!loaded) {
-        wrap.innerHTML = '<div class="empty-chart" style="height:200px"><span class="big">…</span><p>กำลังโหลดข้อมูล…</p></div>';
-        return;
-      }
-      var sorted = sortedRows(filtered);
-      var pageCount = Math.max(1, Math.ceil(sorted.length / TABLE_PAGE_SIZE));
-      var safePage = Math.min(tablePage, pageCount);
-      var start = (safePage - 1) * TABLE_PAGE_SIZE;
-      var pageRows = sorted.slice(start, start + TABLE_PAGE_SIZE);
+    // ---------- toast ----------
+    var toastTimer = null;
+    function toast(msg, isError) {
+      var t = $id("toast");
+      t.textContent = msg;
+      t.className = isError ? "show err" : "show";
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(function () { t.className = ""; }, 2600);
+    }
 
-      var sortSelect = '<select class="sort" id="tableSort">' +
-        SORT_OPTIONS.map(function (o) {
-          return '<option value="' + o.value + '"' + (o.value === tableSort ? " selected" : "") + ">" + esc(o.label) + "</option>";
-        }).join("") + "</select>";
+    // ---------- โหลดข้อมูล ----------
+    function loadData() {
+      if (state.syncing) return;
+      state.syncing = true;
+      state.error = null;
+      updateStatus();
+      google.script.run
+        .withSuccessHandler(function (res) {
+          state.syncing = false;
+          if (res && res.error) {
+            state.error = res.error;
+            state.rows = [];
+          } else {
+            state.rows = (res && res.rows) || [];
+            state.error = null;
+          }
+          state.loaded = true;
+          state.page = 1;
+          renderAll();
+        })
+        .withFailureHandler(function (err) {
+          state.syncing = false;
+          state.loaded = true;
+          state.error = "ไม่สามารถเรียกใช้ Google Apps Script ได้: " + (err && err.message ? err.message : String(err));
+          renderAll();
+        })
+        .getSheetData();
+    }
 
-      var head = "<tr>" + COLUMNS.map(function (c) { return "<th>" + c.label + "</th>"; }).join("") + "</tr>";
-
-      var body;
-      if (!pageRows.length) {
-        body = '<tr><td class="empty" colspan="' + COLUMNS.length + '">ไม่พบรายการที่ตรงกับตัวกรอง</td></tr>';
+    // ---------- render: สถานะ + แถบ error ----------
+    function updateStatus() {
+      var dot = $id("status-dot");
+      var label = $id("status-label");
+      if (state.error) {
+        dot.className = "dot red";
+        label.textContent = "sync failed";
+      } else if (state.syncing) {
+        dot.className = "dot amber pulse";
+        label.textContent = "กำลังซิงก์ข้อมูล…";
+      } else if (state.loaded) {
+        dot.className = "dot green";
+        label.textContent = "synced · " + fmtNum(state.rows.length) + " rows";
       } else {
-        body = pageRows.map(function (r) {
-          return "<tr>" +
-            '<td class="mono">' + esc(r.regNo) + "</td>" +
-            '<td style="white-space:nowrap">' + esc(r.date) + "</td>" +
-            '<td class="clip" title="' + esc(r.mission) + '">' + esc(r.mission) + "</td>" +
-            '<td class="clip" title="' + esc(r.workGroup) + '">' + esc(r.workGroup) + "</td>" +
-            '<td class="clip" title="' + esc(r.agency) + '">' + esc(r.agency) + "</td>" +
-            '<td class="clip" title="' + esc(r.item) + '">' + esc(r.item) + "</td>" +
-            '<td class="clip" title="' + esc(r.category) + '">' + esc(r.category) + "</td>" +
-            '<td class="clip" title="' + esc(r.type) + '">' + esc(r.type) + "</td>" +
-            '<td style="white-space:nowrap">' + esc(r.planType || "—") + "</td>" +
-            '<td class="num">' + fmtBaht(r.price) + "</td>" +
-          "</tr>";
-        }).join("");
+        dot.className = "dot gray";
+        label.textContent = "connecting…";
       }
-
-      var info = sorted.length === 0
-        ? "0 รายการ"
-        : "แสดง " + fmtNum(start + 1) + "–" + fmtNum(Math.min(start + TABLE_PAGE_SIZE, sorted.length)) + " จาก " + fmtNum(sorted.length) + " รายการ";
-
-      wrap.innerHTML =
-        '<div class="table-meta">' +
-          '<span class="tm-rows">rows <b>' + fmtNum(sorted.length) + "</b> / " + fmtNum(filtered.length) + " ผ่านตัวกรอง</span>" +
-          sortSelect +
-        "</div>" +
-        '<div class="table-wrap"><table class="data"><thead>' + head + "</thead><tbody>" + body + "</tbody></table></div>" +
-        '<div class="pager">' +
-          '<span class="pg-info">' + info + "</span>" +
-          '<span class="pg-btns">' +
-            '<button type="button" class="btn btn-sm" data-act="page-prev"' + (safePage <= 1 ? " disabled" : "") + ">‹ ก่อนหน้า</button>" +
-            '<span class="pg-cur">' + safePage + " / " + pageCount + "</span>" +
-            '<button type="button" class="btn btn-sm" data-act="page-next"' + (safePage >= pageCount ? " disabled" : "") + ">ถัดไป ›</button>" +
-          "</span>" +
-        "</div>";
-    }
-
-    /* ---- status / header / footer ---- */
-    function renderStatus() {
-      var dot = document.getElementById("statusDot");
-      var text = document.getElementById("statusText");
-      if (loadError) {
-        dot.className = "dot err";
-        text.textContent = "sync failed";
-      } else if (loading) {
-        dot.className = "dot sync";
-        text.textContent = "กำลังโหลดข้อมูล…";
-      } else if (loaded) {
-        dot.className = "dot";
-        text.textContent = "synced · " + fmtNum(ALL_ROWS.length) + " rows · " + fmtDateTime(META && META.syncedAt);
-      } else {
-        dot.className = "dot sync";
-        text.textContent = "connecting…";
-      }
-    }
-    function fmtDateTime(iso) {
-      if (!iso) return "—";
-      var d = new Date(iso);
-      var p = function (n) { return String(n).padStart(2, "0"); };
-      return p(d.getDate()) + " " + THAI_MONTHS[d.getMonth()] + " " + d.getFullYear() + " " + p(d.getHours()) + ":" + p(d.getMinutes());
-    }
-    function renderError() {
-      var banner = document.getElementById("errorBanner");
-      if (loadError) {
-        document.getElementById("errorMsg").textContent = "ไม่สามารถโหลดข้อมูลจาก Google Sheets ได้ — " + loadError;
+      var banner = $id("error-banner");
+      if (state.error) {
+        $id("error-text").textContent = "ไม่สามารถโหลดข้อมูลจาก Google Sheets ได้ — " + state.error;
         banner.hidden = false;
       } else {
         banner.hidden = true;
       }
     }
-    function renderExportBtn(count) {
-      var btn = document.getElementById("exportBtn");
-      var disabled = count === 0 || loading;
-      btn.disabled = disabled;
-      document.getElementById("csvHint").textContent = "ทุกแถวที่ถูกกรอง (" + fmtNum(count) + ")";
-      if (!disabled && exportOpen) {
-        document.getElementById("exportMenu").hidden = false;
-      }
-    }
-    function renderFooter(count) {
-      var el = document.getElementById("footerRight");
-      el.textContent = loaded
-        ? "sheet://1UtSyr…NRxcw · sheet99 · " + fmtNum(count) + " รายการ · อัปเดตล่าสุด " + fmtDateTime(META && META.syncedAt)
-        : "sheet://1UtSyr…NRxcw · sheet99 · อัปเดตล่าสุด —";
-    }
 
-    function loadingBox() {
-      return '<div class="empty-chart"><span class="big">…</span><p>กำลังโหลดข้อมูล…</p></div>';
-    }
-    function emptyChart(label) {
-      return '<div class="empty-chart"><span class="big">∅</span><p>' + esc(label) + "</p></div>";
-    }
+    // ---------- ตัวกรอง: สร้าง UI ครั้งเดียว ----------
+    function initFilters() {
+      var grid = $id("filter-grid");
+      DIMENSIONS.forEach(function (dim) {
+        var key = dim.key;
+        var wrap = document.createElement("div");
+        wrap.className = "fctrl";
+        wrap.id = "f-" + key;
+        wrap.innerHTML =
+          '<div class="fctrl-head"><span class="fcode">[' + dim.code + ']</span><span class="flabel"></span></div>' +
+          '<button type="button" class="fbtn" id="f-' + key + '-btn" aria-haspopup="listbox">' +
+          '  <span class="fbtn-label">ทั้งหมด</span><span class="fbtn-x" hidden>✕</span><span class="fbtn-caret">▾</span>' +
+          '</button>' +
+          '<div class="fpop" id="f-' + key + '-pop" hidden>' +
+          '  <input class="fsearch" id="f-' + key + '-search" autocomplete="off">' +
+          '  <button type="button" class="fopt-all" id="f-' + key + '-all">ทั้งหมด (<span class="fcount">0</span> ค่า)</button>' +
+          '  <div class="fopts" id="f-' + key + '-opts"></div>' +
+          '  <div class="ffoot">เลือกได้หลายค่า · คลิกเพื่อเลือก/ยกเลิก</div>' +
+          '</div>';
+        wrap.querySelector(".flabel").textContent = dim.label;
+        wrap.querySelector(".fsearch").placeholder = "ค้นหา " + dim.label + "…";
+        grid.appendChild(wrap);
 
-    /* ================= popover ================= */
-    function openPopover(key, anchor) {
-      if (popover.open && popover.key === key) { closePopover(); return; }
-      popover = { open: true, key: key, search: "" };
-      positionPopover(anchor);
-      renderPopoverList();
-      var input = document.getElementById("popoverSearch");
-      input.value = "";
-      input.focus();
-      document.getElementById("popoverBackdrop").style.display = "block";
-    }
-    function closePopover() {
-      popover = { open: false, key: null, search: "" };
-      document.getElementById("popover").style.display = "none";
-      document.getElementById("popoverBackdrop").style.display = "none";
-    }
-    function positionPopover(anchor) {
-      var panel = document.getElementById("popover");
-      var a = anchor || document.querySelector('[data-act="open-filter"][data-dim="' + popover.key + '"]');
-      if (!a) return;
-      var r = a.getBoundingClientRect();
-      var width = Math.min(320, window.innerWidth - 24);
-      var left = Math.max(12, Math.min(r.left, window.innerWidth - width - 12));
-      var top = r.bottom + 6;
-      panel.style.width = width + "px";
-      panel.style.left = left + "px";
-      panel.style.top = top + "px";
-      panel.style.display = "flex";
-      panel.style.maxHeight = Math.max(120, window.innerHeight - top - 12) + "px";
-    }
-    function renderPopoverList() {
-      var box = document.getElementById("popoverList");
-      var key = popover.key;
-      if (!key) return;
-      var options = uniqueValues(filterRows(ALL_ROWS, filters, key), key);
-      var sel = new Set(filters[key] || []);
-      var q = popover.search.trim().toLowerCase();
-      var shown = q ? options.filter(function (o) { return String(o.value).toLowerCase().indexOf(q) !== -1; }) : options;
-
-      var html =
-        '<button type="button" class="pop-opt' + (sel.size ? "" : " sel") + '" data-act="clear-dim" data-dim="' + key + '">' +
-          '<span class="cb">' + (sel.size ? "" : "✓") + "</span>" +
-          '<span class="pop-label">ทั้งหมด (' + fmtNum(options.length) + " ค่า)</span>" +
-          (sel.size ? '<span class="pop-clear">ล้าง</span>' : "") +
-        "</button>";
-      shown.forEach(function (o) {
-        var on = sel.has(o.value);
-        html +=
-          '<button type="button" class="pop-opt' + (on ? " sel" : "") + '" data-act="toggle-option" data-dim="' + key + '" data-value="' + esc(o.value) + '">' +
-            '<span class="cb">' + (on ? "✓" : "") + "</span>" +
-            '<span class="pop-label">' + esc(o.value) + "</span>" +
-            '<span class="pop-count">' + fmtNum(o.count) + "</span>" +
-          "</button>";
+        $id("f-" + key + "-btn").addEventListener("click", function (ev) {
+          ev.stopPropagation();
+          togglePop(key);
+        });
+        $id("f-" + key + "-search").addEventListener("input", function () { renderOptionsList(key); });
+        $id("f-" + key + "-search").addEventListener("click", function (ev) { ev.stopPropagation(); });
+        $id("f-" + key + "-all").addEventListener("click", function (ev) {
+          ev.stopPropagation();
+          setFilter(key, []);
+          $id("f-" + key + "-search").value = "";
+        });
+        $id("f-" + key + "-btn").querySelector(".fbtn-x").addEventListener("click", function (ev) {
+          ev.stopPropagation();
+          setFilter(key, []);
+          closeAllPops();
+        });
       });
-      if (!shown.length) {
-        html += '<div class="pop-empty">ไม่พบ “' + esc(popover.search) + '”</div>';
-      }
-      box.innerHTML = html;
+      document.addEventListener("click", closeAllPops);
     }
 
-    /* ================= export ================= */
+    function togglePop(key) {
+      var pop = $id("f-" + key + "-pop");
+      var willOpen = pop.hidden;
+      closeAllPops();
+      if (willOpen) {
+        pop.hidden = false;
+        var search = $id("f-" + key + "-search");
+        setTimeout(function () { search.focus(); }, 10);
+      }
+    }
+
+    function closeAllPops() {
+      DIMENSIONS.forEach(function (d) { $id("f-" + d.key + "-pop").hidden = true; });
+    }
+
+    // ---------- render: ตัวกรอง ----------
+    function renderFilters() {
+      DIMENSIONS.forEach(function (dim) {
+        var key = dim.key;
+        var sel = state.filters[key] || [];
+        var opts = optionList(key);
+        var btn = $id("f-" + key + "-btn");
+        var label = btn.querySelector(".fbtn-label");
+        var x = btn.querySelector(".fbtn-x");
+        var caret = btn.querySelector(".fbtn-caret");
+        if (sel.length === 0) {
+          label.textContent = "ทั้งหมด";
+          btn.classList.remove("active");
+          x.hidden = true; caret.hidden = false;
+        } else if (sel.length <= 2) {
+          label.textContent = sel.join(" · ");
+          btn.classList.add("active");
+          x.hidden = false; caret.hidden = true;
+        } else {
+          label.textContent = sel.length + " รายการ";
+          btn.classList.add("active");
+          x.hidden = false; caret.hidden = true;
+        }
+        $id("f-" + key + "-all").querySelector(".fcount").textContent = fmtNum(opts.length);
+        renderOptionsList(key);
+      });
+
+      // ช่วงเวลา
+      $id("date-from").value = state.dateFrom;
+      $id("date-to").value = state.dateTo;
+      $id("btn-clear-range").hidden = !(state.dateFrom || state.dateTo);
+    }
+
+    function renderOptionsList(key) {
+      var dim = DIMENSION_MAP[key];
+      var sel = state.filters[key] || [];
+      var selSet = {};
+      sel.forEach(function (v) { selSet[v] = true; });
+      var q = ($id("f-" + key + "-search").value || "").trim().toLowerCase();
+      var opts = optionList(key).filter(function (o) {
+        return !q || o.value.toLowerCase().indexOf(q) !== -1;
+      });
+      var box = $id("f-" + key + "-opts");
+      box.innerHTML = "";
+      if (opts.length === 0) {
+        var empty = document.createElement("div");
+        empty.className = "fopt-empty";
+        empty.textContent = 'ไม่พบ "' + q + '" ใน ' + dim.label;
+        box.appendChild(empty);
+        return;
+      }
+      opts.forEach(function (o) {
+        var labelEl = document.createElement("label");
+        labelEl.className = "fopt";
+        var cb = document.createElement("input");
+        cb.type = "checkbox";
+        cb.checked = !!selSet[o.value];
+        var name = document.createElement("span");
+        name.className = "fopt-name";
+        name.textContent = o.value;
+        var cnt = document.createElement("span");
+        cnt.className = "fopt-count";
+        cnt.textContent = fmtNum(o.count);
+        labelEl.appendChild(cb); labelEl.appendChild(name); labelEl.appendChild(cnt);
+        labelEl.addEventListener("click", function (ev) { ev.stopPropagation(); toggleValue(key, o.value); });
+        box.appendChild(labelEl);
+      });
+    }
+
+    function toggleValue(key, value) {
+      var cur = (state.filters[key] || []).slice();
+      var idx = cur.indexOf(value);
+      if (idx === -1) cur.push(value); else cur.splice(idx, 1);
+      setFilter(key, cur);
+    }
+
+    function setFilter(key, values) {
+      if (values.length === 0) delete state.filters[key];
+      else state.filters[key] = values;
+      state.page = 1;
+      renderAll();
+    }
+
+    // ---------- render: chips ----------
+    function renderChips() {
+      var box = $id("chips");
+      box.innerHTML = "";
+      var activeCount = 0;
+
+      DIMENSIONS.forEach(function (dim) {
+        var sel = state.filters[dim.key] || [];
+        sel.forEach(function (v) {
+          activeCount++;
+          box.appendChild(makeChip(dim.code, v, function () {
+            var rest = (state.filters[dim.key] || []).filter(function (x) { return x !== v; });
+            setFilter(dim.key, rest);
+          }));
+        });
+      });
+
+      var hasRange = !!(state.dateFrom || state.dateTo);
+      if (hasRange) {
+        activeCount++;
+        box.appendChild(makeChip("DAT",
+          (state.dateFrom ? isoToThai(state.dateFrom) : "…") + " → " + (state.dateTo ? isoToThai(state.dateTo) : "…"),
+          function () {
+            state.dateFrom = ""; state.dateTo = ""; state.page = 1;
+            renderAll();
+          }));
+      }
+
+      $id("active-count").innerHTML = 'active <span' + (activeCount > 0 ? ' class="accent"' : "") + '>' + activeCount + "</span>/10";
+      $id("btn-clear-all").hidden = activeCount === 0;
+    }
+
+    function makeChip(code, value, onRemove) {
+      var b = document.createElement("button");
+      b.type = "button";
+      b.className = "chip";
+      b.innerHTML = '<span class="chip-code"></span><span class="chip-val"></span><span class="chip-x">✕</span>';
+      b.querySelector(".chip-code").textContent = code;
+      b.querySelector(".chip-val").textContent = value;
+      b.addEventListener("click", onRemove);
+      return b;
+    }
+
+    // ---------- render: KPI ----------
+    function renderKpis() {
+      var filtered = filteredRows();
+      var total = sum(filtered);
+      var agencies = {};
+      filtered.forEach(function (r) { agencies[r.agency] = true; });
+      var avg = filtered.length ? total / filtered.length : 0;
+
+      $id("kpi-total").textContent = fmtBaht(total);
+      $id("kpi-total-cap").textContent = "จาก " + fmtNum(filtered.length) + " รายการ";
+      $id("kpi-records").textContent = fmtNum(filtered.length);
+      $id("kpi-records-cap").textContent = state.loaded ? "ทั้งหมด " + fmtNum(state.rows.length) + " รายการ" : "…";
+      $id("kpi-agencies").textContent = fmtNum(Object.keys(agencies).length);
+      $id("kpi-agencies-cap").textContent = "หน่วยงานที่เกี่ยวข้อง";
+      $id("kpi-avg").textContent = fmtBaht(avg);
+      $id("kpi-avg-cap").textContent = "ค่าเฉลี่ยต่อรายการ";
+    }
+
+    // ---------- render: กราฟหลัก (แท่ง) ----------
+    function renderMainChart() {
+      var filtered = filteredRows();
+      var total = sum(filtered);
+      var groups = groupBySum(filtered, state.groupBy).slice(0, 12);
+
+      $id("main-chart-title").innerHTML = 'ยอดรวมราคาเสนอ จำแนกตาม <span class="accent">' + DIMENSION_MAP[state.groupBy].label + "</span>";
+      $id("main-chart-sub").textContent = "group by " + DIMENSION_MAP[state.groupBy].code + " · top " + groups.length + " · " + fmtCompact(total);
+
+      var btns = $id("groupby-btns");
+      btns.innerHTML = "";
+      DIMENSIONS.forEach(function (dim) {
+        var b = document.createElement("button");
+        b.type = "button";
+        b.className = "gb-btn" + (state.groupBy === dim.key ? " on" : "");
+        b.textContent = dim.code;
+        b.title = dim.label;
+        b.addEventListener("click", function () { state.groupBy = dim.key; renderMainChart(); });
+        btns.appendChild(b);
+      });
+
+      var box = $id("main-chart");
+      box.innerHTML = "";
+      if (groups.length === 0) { box.appendChild(emptyChart("ไม่มีข้อมูลที่ตรงกับตัวกรองปัจจุบัน")); return; }
+
+      var max = 1;
+      groups.forEach(function (g) { if (g.sum > max) max = g.sum; });
+
+      var chart = document.createElement("div");
+      chart.className = "barchart";
+      groups.forEach(function (g) {
+        var col = document.createElement("div");
+        col.className = "bc-col";
+        var track = document.createElement("div");
+        track.className = "bc-track";
+        var bar = document.createElement("div");
+        bar.className = "bc-bar" + (g.sum === max ? " top" : "");
+        bar.style.height = Math.max(2, (g.sum / max) * 100).toFixed(1) + "%";
+        bar.title = g.name + "\n" + fmtBaht(g.sum) + " · " + fmtNum(g.count) + " รายการ";
+        var val = document.createElement("span");
+        val.className = "bc-val";
+        val.textContent = fmtCompact(g.sum);
+        var label = document.createElement("span");
+        label.className = "bc-label";
+        label.textContent = truncate(g.name, 18);
+        label.title = g.name;
+        track.appendChild(bar);
+        col.appendChild(track); col.appendChild(val); col.appendChild(label);
+        chart.appendChild(col);
+      });
+      box.appendChild(chart);
+    }
+
+    // ---------- render: donut หมวด ----------
+    function renderDonut() {
+      var filtered = filteredRows();
+      var total = sum(filtered);
+      var groups = topGroups(groupBySum(filtered, "category"), 7);
+      var donut = $id("donut");
+      var legend = $id("donut-legend");
+      legend.innerHTML = "";
+      // อัปเดตตัวเลขกลางโดนัท (element คงเดิม ไม่ถูกลบ)
+      var centerVal = donut.querySelector(".donut-center .v");
+      if (centerVal) centerVal.textContent = fmtCompact(total);
+
+      if (groups.length === 0) {
+        donut.style.background = "none";
+        var keep = donut.querySelector(".donut-center .v");
+        if (keep) keep.textContent = "฿0";
+        return;
+      }
+      var stops = [];
+      var acc = 0;
+      groups.forEach(function (g, i) {
+        var share = total > 0 ? (g.sum / total) * 100 : 0;
+        stops.push(PALETTE[i % PALETTE.length] + " " + acc.toFixed(2) + "% " + (acc + share).toFixed(2) + "%");
+        acc += share;
+
+        var li = document.createElement("li");
+        li.innerHTML = '<span class="dot-sq"></span><span class="l-name"></span><span class="l-share"></span><span class="l-val"></span>';
+        li.querySelector(".dot-sq").style.background = PALETTE[i % PALETTE.length];
+        li.querySelector(".l-name").textContent = g.name;
+        li.querySelector(".l-share").textContent = (total > 0 ? (g.sum / total) * 100 : 0).toFixed(1) + "%";
+        li.querySelector(".l-val").textContent = fmtCompact(g.sum);
+        legend.appendChild(li);
+      });
+      donut.style.background = "conic-gradient(" + stops.join(", ") + ")";
+    }
+
+    // ---------- render: TOP 10 หน่วยงาน ----------
+    function renderAgencies() {
+      var filtered = filteredRows();
+      var groups = groupBySum(filtered, "agency").slice(0, 10);
+      var box = $id("agency-chart");
+      box.innerHTML = "";
+      if (groups.length === 0) { box.appendChild(emptyChart("ไม่มีข้อมูล")); return; }
+
+      var max = 1;
+      groups.forEach(function (g) { if (g.sum > max) max = g.sum; });
+      var list = document.createElement("div");
+      list.className = "hbar-list";
+      groups.forEach(function (g) {
+        var row = document.createElement("div");
+        row.className = "hbar-row";
+        var name = document.createElement("span");
+        name.className = "hbar-name";
+        name.textContent = truncate(g.name, 22);
+        name.title = g.name;
+        var track = document.createElement("div");
+        track.className = "hbar-track";
+        var fill = document.createElement("div");
+        fill.className = "hbar-fill" + (g.sum === max ? " top" : "");
+        fill.style.width = Math.max(1.5, (g.sum / max) * 100).toFixed(1) + "%";
+        fill.title = g.name + "\n" + fmtBaht(g.sum) + " · " + fmtNum(g.count) + " รายการ";
+        track.appendChild(fill);
+        var val = document.createElement("span");
+        val.className = "hbar-val";
+        val.textContent = fmtCompact(g.sum);
+        row.appendChild(name); row.appendChild(track); row.appendChild(val);
+        list.appendChild(row);
+      });
+      box.appendChild(list);
+    }
+
+    // ---------- render: สถิติตามประเภทแผน ----------
+    function renderPlan() {
+      var filtered = filteredRows();
+      var total = sum(filtered);
+      var map = {};
+      groupBySum(filtered, "planType").forEach(function (g) { map[g.name] = g; });
+      var box = $id("plan-breakdown");
+      box.innerHTML = "";
+
+      PLAN_ORDER.forEach(function (name) {
+        var g = map[name] || { name: name, sum: 0, count: 0 };
+        var share = total > 0 ? (g.sum / total) * 100 : 0;
+        var card = document.createElement("div");
+        card.className = "plan-card";
+        card.innerHTML =
+          '<div class="plan-head"><span class="dot-sq"></span><span class="plan-name"></span></div>' +
+          '<div class="plan-amount"></div>' +
+          '<div class="plan-meta"></div>' +
+          '<div class="plan-track"><div class="plan-fill"></div></div>';
+        card.querySelector(".dot-sq").style.background = PLAN_COLORS[name];
+        card.querySelector(".plan-name").textContent = name;
+        card.querySelector(".plan-amount").textContent = fmtBaht(g.sum);
+        card.querySelector(".plan-meta").textContent = fmtNum(g.count) + " รายการ · " + share.toFixed(1) + "% ของยอดรวม";
+        card.querySelector(".plan-fill").style.background = PLAN_COLORS[name];
+        card.querySelector(".plan-fill").style.width = (total > 0 ? Math.max(2, (g.sum / total) * 100) : 0).toFixed(1) + "%";
+        box.appendChild(card);
+      });
+    }
+
+    // ---------- render: ตาราง ----------
+    function renderTable() {
+      var filtered = filteredRows();
+      var sorted = sortedRows(filtered);
+      var pageCount = Math.max(1, Math.ceil(sorted.length / PAGE_SIZE));
+      if (state.page > pageCount) state.page = pageCount;
+      var start = (state.page - 1) * PAGE_SIZE;
+      var pageRows = sorted.slice(start, start + PAGE_SIZE);
+
+      $id("table-rows-label").innerHTML = 'rows <span class="accent">' + fmtNum(sorted.length) + "</span> / " + fmtNum(filtered.length) + " ผ่านตัวกรอง";
+
+      var sel = $id("sort-select");
+      sel.value = state.sortKey;
+      sel.onchange = function () { state.sortKey = sel.value; state.page = 1; renderTable(); };
+
+      var tbody = $id("table-body");
+      tbody.innerHTML = "";
+      if (pageRows.length === 0) {
+        var tr = document.createElement("tr");
+        var td = document.createElement("td");
+        td.colSpan = 10;
+        td.className = "empty-cell";
+        td.textContent = "ไม่พบรายการที่ตรงกับตัวกรอง";
+        tr.appendChild(td);
+        tbody.appendChild(tr);
+      } else {
+        pageRows.forEach(function (r) {
+          var tr = document.createElement("tr");
+          tr.innerHTML =
+            "<td class='c-regno'></td><td></td><td class='c-txt'></td><td class='c-txt'></td><td class='c-txt'></td>" +
+            "<td class='c-txt'></td><td class='c-txt'></td><td class='c-txt'></td><td></td><td class='c-price'></td>";
+          var tds = tr.querySelectorAll("td");
+          var vals = [r.regNo, r.date, r.mission, r.workGroup, r.agency, r.item, r.category, r.type, r.planType || "—"];
+          for (var i = 0; i < vals.length; i++) {
+            tds[i].textContent = vals[i];
+            if (tds[i].className === "c-txt") tds[i].title = vals[i];
+          }
+          tds[9].textContent = fmtBaht(r.price);
+          tbody.appendChild(tr);
+        });
+      }
+
+      $id("table-pager-info").textContent = sorted.length === 0
+        ? "0 รายการ"
+        : "แสดง " + fmtNum(start + 1) + "–" + fmtNum(Math.min(start + PAGE_SIZE, sorted.length)) + " จาก " + fmtNum(sorted.length) + " รายการ";
+      $id("table-pager-page").textContent = state.page + " / " + pageCount;
+      $id("btn-prev").disabled = state.page <= 1;
+      $id("btn-next").disabled = state.page >= pageCount;
+    }
+
+    // ---------- helpers ----------
+    function emptyChart(label) {
+      var d = document.createElement("div");
+      d.className = "empty-chart";
+      d.innerHTML = '<span class="empty-glyph">∅</span><span class="empty-label"></span>';
+      d.querySelector(".empty-label").textContent = label;
+      return d;
+    }
+
+    function renderAll() {
+      updateStatus();
+      renderFilters();
+      renderChips();
+      renderKpis();
+      renderMainChart();
+      renderDonut();
+      renderAgencies();
+      renderPlan();
+      renderTable();
+    }
+
+    // ---------- export CSV ----------
+    function dateStamp() {
+      var d = new Date();
+      var p = function (n) { return String(n).padStart(2, "0"); };
+      return d.getFullYear() + "-" + p(d.getMonth() + 1) + "-" + p(d.getDate());
+    }
+
     function csvField(value) {
       var s = String(value);
-      return /[\",\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+      return /[",\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
     }
 
     function exportCSV() {
-      var filtered = filterRows(ALL_ROWS, filters);
-      if (!filtered.length) return;
+      var filtered = filteredRows();
+      if (filtered.length === 0) { toast("ไม่มีข้อมูลที่จะส่งออก", true); return; }
       var sorted = filtered.slice().sort(function (a, b) { return b.price - a.price; });
-      var lines = [EXPORT_HEADERS.join(",")];
+      var lines = [EXPORT_HEADERS.map(csvField).join(",")];
       sorted.forEach(function (r) {
-        lines.push([
-          r.regNo, r.date, r.mission, r.workGroup, r.agency,
-          r.item, r.category, r.type, r.planType, r.price,
-        ].map(csvField).join(","));
+        lines.push([r.regNo, r.date, r.mission, r.workGroup, r.agency, r.item, r.category, r.type, r.planType, r.price].map(csvField).join(","));
       });
       var blob = new Blob(["\uFEFF" + lines.join("\r\n")], { type: "text/csv;charset=utf-8" });
-      var url = URL.createObjectURL(blob);
-      var a = document.createElement("a");
-      a.href = url;
-      a.download = "ราคาเสนอ_" + dateStamp() + ".csv";
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      setTimeout(function () { URL.revokeObjectURL(url); }, 3000);
+      downloadBlob(blob, "ราคาเสนอ_" + dateStamp() + ".csv");
     }
 
-    function buildPrintReport(shown, totalCount, total, agencyCount) {
-      var active = activeFilterEntries();
-      var cols = [9, 8, 12, 9, 9, 19, 7, 8, 7, 12]; // % widths, sum = 100
-      var colgroup = cols.map(function (w) { return '<col style="width:' + w + '%">'; }).join("");
-      var head = "<tr>" + EXPORT_HEADERS.map(function (h) { return "<th>" + h + "</th>"; }).join("") + "</tr>";
-      var body = shown.map(function (r) {
-        return "<tr>" +
-          "<td>" + esc(r.regNo) + "</td>" +
-          "<td>" + esc(r.date) + "</td>" +
-          "<td>" + esc(r.mission) + "</td>" +
-          "<td>" + esc(r.workGroup) + "</td>" +
-          "<td>" + esc(r.agency) + "</td>" +
-          "<td>" + esc(r.item) + "</td>" +
-          "<td>" + esc(r.category) + "</td>" +
-          "<td>" + esc(r.type) + "</td>" +
-          "<td>" + esc(r.planType || "—") + "</td>" +
-          '<td class="num">' + fmtBaht(r.price) + "</td>" +
-        "</tr>";
-      }).join("");
-
-      var filterParts = active.map(function (e) {
-        return DIM_MAP[e[0]].code + ": " + e[1].join(", ");
-      });
-      if (dateRange.from || dateRange.to) {
-        filterParts.push("DAT: " + (dateRange.from ? isoToThai(dateRange.from) : "…") + " → " + (dateRange.to ? isoToThai(dateRange.to) : "…"));
+    function downloadBlob(blob, filename) {
+      try {
+        var url = URL.createObjectURL(blob);
+        var a = document.createElement("a");
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        setTimeout(function () { URL.revokeObjectURL(url); }, 4000);
+        toast("ดาวน์โหลด " + filename + " แล้ว");
+      } catch (e) {
+        toast("เบราว์เซอร์บล็อกการดาวน์โหลด — อนุญาตให้ดาวน์โหลดในหน้าเว็บนี้ แล้วลองอีกครั้ง", true);
       }
-      var filtersLine = filterParts.length
-        ? '<p id="printFilters">ตัวกรอง: ' + esc(filterParts.join(" · ")) + "</p>"
-        : "";
-      var footer = totalCount > PRINT_MAX_ROWS
-        ? "แสดง " + fmtNum(PRINT_MAX_ROWS) + " แถวแรกจาก " + fmtNum(totalCount) + " แถว (ส่งออก CSV เพื่อรับข้อมูลครบทั้งหมด)"
-        : "ราคาเสนอ/terminal";
+    }
 
-      document.getElementById("printReport").innerHTML =
-        '<div id="printHeader">' +
-          "<h1>ราคาเสนอ/terminal — รายงานข้อมูล</h1>" +
-          "<p>sheet://1UtSyr…NRxcw · sheet99 · อัปเดตล่าสุดจาก Google Sheets · สร้างเมื่อ: " + thaiDateTime(new Date()) + "</p>" +
-        "</div>" +
-        '<p id="printSummary">ยอดรวม: ' + fmtBaht(total) + " · รายการ: " + fmtNum(totalCount) + " · หน่วยงาน: " + fmtNum(agencyCount) +
-          " · แสดง: " + fmtNum(shown.length) + " แถว" + (totalCount > shown.length ? " จาก " + fmtNum(totalCount) : "") + "</p>" +
-        filtersLine +
-        '<table id="printTable"><colgroup>' + colgroup + "</colgroup><thead>" + head + "</thead><tbody>" + body + "</tbody></table>" +
-        '<p id="printFooter">' + esc(footer) + "</p>";
+    // ---------- export PDF (A4 แนวนอน ผ่าน print) ----------
+    function buildPrintReport() {
+      var filtered = filteredRows();
+      var total = sum(filtered);
+      var agencies = {};
+      filtered.forEach(function (r) { agencies[r.agency] = true; });
+      // เรียงจาก เลขทะเบียนคุม น้อยไปมาก (ตัวเลขท้ายสุด)
+      var sorted = filtered.slice().sort(function (a, b) {
+        return regNoNum(a.regNo) - regNoNum(b.regNo) || a.regNo.localeCompare(b.regNo, "th");
+      });
+      var shown = sorted.slice(0, MAX_PDF_ROWS);
+
+      $id("print-title").textContent = "ราคาเสนอ/terminal — รายงานข้อมูล";
+      $id("print-sub").textContent = "sheet://1UtSyr…NRxcw · sheet99";
+      $id("print-created").textContent = "สร้างเมื่อ: " + new Date().toLocaleString("th-TH", {
+        day: "2-digit", month: "long", year: "numeric", hour: "2-digit", minute: "2-digit"
+      });
+      $id("print-summary").textContent =
+        "ยอดรวม: " + fmtBaht(total) +
+        "  ·  รายการ: " + fmtNum(filtered.length) +
+        "  ·  หน่วยงาน: " + fmtNum(Object.keys(agencies).length) +
+        "  ·  แสดง: " + fmtNum(shown.length) + " แถว" +
+        (filtered.length > MAX_PDF_ROWS ? " จาก " + fmtNum(filtered.length) : "");
+
+      var parts = [];
+      DIMENSIONS.forEach(function (dim) {
+        var sel = state.filters[dim.key];
+        if (sel && sel.length) parts.push(dim.code + ": " + sel.join(", "));
+      });
+      if (state.dateFrom || state.dateTo) {
+        parts.push("DAT: " + (state.dateFrom ? isoToThai(state.dateFrom) : "…") + " → " + (state.dateTo ? isoToThai(state.dateTo) : "…"));
+      }
+      var filterEl = $id("print-filters");
+      filterEl.hidden = parts.length === 0;
+      filterEl.textContent = parts.length ? "ตัวกรอง: " + parts.join("  ·  ") : "";
+
+      var tbody = $id("print-table-body");
+      tbody.innerHTML = "";
+      shown.forEach(function (r) {
+        var tr = document.createElement("tr");
+        var vals = [r.regNo, r.date, r.mission, r.workGroup, r.agency, r.item, r.category, r.type, r.planType || "—", fmtBaht(r.price)];
+        vals.forEach(function (v) {
+          var td = document.createElement("td");
+          td.textContent = v;
+          tr.appendChild(td);
+        });
+        tr.querySelectorAll("td")[9].className = "report-price";
+        tbody.appendChild(tr);
+      });
+
+      var note = $id("print-note");
+      if (filtered.length > MAX_PDF_ROWS) {
+        note.hidden = false;
+        note.textContent = "แสดง " + fmtNum(MAX_PDF_ROWS) + " แถวแรกจาก " + fmtNum(filtered.length) + " แถว (ส่งออก CSV เพื่อรับข้อมูลครบทั้งหมด)";
+      } else {
+        note.hidden = true;
+      }
     }
 
     function exportPDF() {
-      var filtered = filterRows(ALL_ROWS, filters);
-      if (!filtered.length) return;
-      var sorted = filtered.slice().sort(function (a, b) { return compareRegNo(a.regNo, b.regNo); });
-      var shown = sorted.slice(0, PRINT_MAX_ROWS);
-      buildPrintReport(shown, sorted.length, totalSum(filtered), new Set(filtered.map(function (r) { return r.agency; })).size);
+      if (filteredRows().length === 0) { toast("ไม่มีข้อมูลที่จะส่งออก", true); return; }
+      buildPrintReport();
       window.print();
     }
 
-    /* ================= events ================= */
-    document.addEventListener("click", function (e) {
-      var t = e.target.closest("[data-act]");
-      if (t) {
-        var act = t.getAttribute("data-act");
-        switch (act) {
-          case "open-filter":
-            openPopover(t.getAttribute("data-dim"), t);
-            break;
-          case "toggle-option": {
-            var key1 = t.getAttribute("data-dim");
-            var val1 = t.getAttribute("data-value");
-            var cur = (filters[key1] || []).slice();
-            var idx = cur.indexOf(val1);
-            if (idx === -1) cur.push(val1); else cur.splice(idx, 1);
-            setFilter(key1, cur);
-            render();
-            break;
-          }
-          case "clear-dim":
-            delete filters[t.getAttribute("data-dim")];
-            render();
-            break;
-          case "remove-chip": {
-            var key2 = t.getAttribute("data-dim");
-            var val2 = t.getAttribute("data-value");
-            var cur2 = (filters[key2] || []).filter(function (v) { return v !== val2; });
-            setFilter(key2, cur2);
-            render();
-            break;
-          }
-          case "reset-filters":
-            filters = {};
-            dateRange = { from: "", to: "" };
-            document.getElementById("dateFrom").value = "";
-            document.getElementById("dateTo").value = "";
-            render();
-            break;
-          case "clear-date-range":
-            dateRange = { from: "", to: "" };
-            document.getElementById("dateFrom").value = "";
-            document.getElementById("dateTo").value = "";
-            render();
-            break;
-          case "group-by":
-            groupByKey = t.getAttribute("data-key");
-            render();
-            break;
-          case "page-prev":
-            tablePage = Math.max(1, tablePage - 1);
-            render();
-            break;
-          case "page-next":
-            tablePage += 1;
-            render();
-            break;
-          case "toggle-export":
-            exportOpen = !exportOpen;
-            document.getElementById("exportMenu").hidden = !exportOpen;
-            break;
-          case "export-csv":
-            exportOpen = false;
-            document.getElementById("exportMenu").hidden = true;
-            exportCSV();
-            break;
-          case "export-pdf":
-            exportOpen = false;
-            document.getElementById("exportMenu").hidden = true;
-            exportPDF();
-            break;
-          case "refresh":
-            closePopover();
-            loadData();
-            break;
-          case "close-popover":
-            closePopover();
-            break;
-          case "dismiss-error":
-            loadError = null;
-            renderError();
-            break;
-        }
-        return;
-      }
-      // คลิกข้างนอก → ปิด popover / export menu
-      if (popover.open && !e.target.closest("#popover") && !e.target.closest('[data-act="open-filter"]')) {
-        closePopover();
-      }
-      if (exportOpen && !e.target.closest("#exportMenu") && !e.target.closest("#exportBtn")) {
-        exportOpen = false;
-        document.getElementById("exportMenu").hidden = true;
-      }
-    });
+    // ---------- init ----------
+    function init() {
+      initFilters();
 
-    document.addEventListener("input", function (e) {
-      if (e.target && e.target.id === "popoverSearch" && popover.open) {
-        popover.search = e.target.value;
-        renderPopoverList();
-      }
-    });
+      $id("date-from").addEventListener("change", function () {
+        state.dateFrom = $id("date-from").value;
+        state.page = 1;
+        renderAll();
+      });
+      $id("date-to").addEventListener("change", function () {
+        state.dateTo = $id("date-to").value;
+        state.page = 1;
+        renderAll();
+      });
+      $id("btn-clear-range").addEventListener("click", function () {
+        state.dateFrom = ""; state.dateTo = ""; state.page = 1;
+        renderAll();
+      });
+      $id("btn-clear-all").addEventListener("click", function () {
+        state.filters = {};
+        state.dateFrom = ""; state.dateTo = ""; state.page = 1;
+        renderAll();
+      });
+      $id("btn-csv").addEventListener("click", exportCSV);
+      $id("btn-pdf").addEventListener("click", exportPDF);
+      $id("btn-refresh").addEventListener("click", loadData);
+      $id("btn-prev").addEventListener("click", function () {
+        if (state.page > 1) { state.page--; renderTable(); }
+      });
+      $id("btn-next").addEventListener("click", function () {
+        var count = Math.max(1, Math.ceil(filteredRows().length / PAGE_SIZE));
+        if (state.page < count) { state.page++; renderTable(); }
+      });
+      $id("error-close").addEventListener("click", function () {
+        state.error = null;
+        updateStatus();
+      });
 
-    document.addEventListener("change", function (e) {
-      if (e.target && e.target.id === "tableSort") {
-        tableSort = e.target.value;
-        tablePage = 1;
-        render();
-      } else if (e.target && (e.target.id === "dateFrom" || e.target.id === "dateTo")) {
-        var from = document.getElementById("dateFrom").value;
-        var to = document.getElementById("dateTo").value;
-        if (from || to) dateRange = { from: from, to: to };
-        else dateRange = { from: "", to: "" };
-        tablePage = 1;
-        render();
-      }
-    });
-
-    document.addEventListener("keydown", function (e) {
-      if (e.key === "Escape") {
-        closePopover();
-        if (exportOpen) {
-          exportOpen = false;
-          document.getElementById("exportMenu").hidden = true;
-        }
-      }
-    });
-
-    window.addEventListener("resize", function () {
-      if (popover.open) positionPopover();
-    });
-
-    /* ================= data loading ================= */
-    function loadData() {
-      loading = true;
-      loadError = null;
-      render(); // วาดโครงหน้า (loading placeholder) ก่อนข้อมูลมา
-      renderStatus();
-      renderError();
-
-      if (typeof google === "undefined" || !google.script || !google.script.run) {
-        loading = false;
-        loadError = "เปิดไฟล์ HTML โดยตรงจากเบราว์เซอร์ไม่ได้ — ต้อง deploy โปรเจกต์นี้เป็น Web App บน Google Apps Script ก่อน (ดู apps-script/README.md)";
-        renderStatus();
-        renderError();
-        return;
-      }
-
-      google.script.run
-        .withSuccessHandler(function (res) {
-          ALL_ROWS = res.rows || [];
-          META = res;
-          loaded = true;
-          loading = false;
-          tablePage = 1;
-          render();
-        })
-        .withFailureHandler(function (err) {
-          loading = false;
-          loadError = (err && err.message) ? err.message : String(err);
-          renderStatus();
-          renderError();
-        })
-        .getSheetData();
+      renderAll();
+      loadData();
     }
 
-    /* ================= init ================= */
-    render(); // วาดโครงหน้า (loading placeholder) ก่อนข้อมูลมา
-    loadData();
-  })();
+    document.addEventListener("DOMContentLoaded", init);
   </script>
 </body>
 </html>
