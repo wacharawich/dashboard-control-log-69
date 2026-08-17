@@ -1,4 +1,12 @@
-import { DIMENSION_MAP, fmtBaht, fmtNum, type Filters, type SheetRow } from "@/lib/sheet";
+import {
+  DIMENSION_MAP,
+  fmtBaht,
+  fmtNum,
+  isoToThai,
+  type FilterKey,
+  type Filters,
+  type SheetRow,
+} from "@/lib/sheet";
 
 // Prompt-Regular TTF (Thai + Latin) served with CORS enabled — used to render
 // Thai text correctly inside the jsPDF report (built-in PDF fonts have no Thai).
@@ -164,9 +172,16 @@ export async function exportPDF(
   // summary — single compact row (landscape has room for everything on one line)
   doc.setTextColor(38, 60, 49);
   doc.setFontSize(9);
-  const activeFilters = (Object.entries(ctx.filters) as [keyof Filters, string[]][]).filter(
+  const activeFilters = (Object.entries(ctx.filters) as [FilterKey, string[]][]).filter(
     ([, values]) => values && values.length > 0,
   );
+  const range = ctx.filters.dateRange;
+  const rangeParts: string[] = [];
+  if (range?.from || range?.to) {
+    rangeParts.push(
+      `DAT: ${range.from ? isoToThai(range.from) : "…"} → ${range.to ? isoToThai(range.to) : "…"}`,
+    );
+  }
   doc.text(
     `ยอดรวม: ${fmtBaht(ctx.total)}  ·  รายการ: ${fmtNum(rows.length)}  ·  หน่วยงาน: ${fmtNum(ctx.agencyCount)}  ·  แสดง: ${fmtNum(shown.length)} แถว${rows.length > MAX_PDF_ROWS ? ` จาก ${fmtNum(rows.length)}` : ""}`,
     margin,
@@ -175,10 +190,13 @@ export async function exportPDF(
 
   // filters — wrapped onto extra lines only when the list is long
   let tableStart = 38;
-  if (activeFilters.length > 0) {
-    const filterText = activeFilters
-      .map(([key, values]) => `${DIMENSION_MAP[key].code}: ${values.join(", ")}`)
-      .join("  ·  ");
+  if (activeFilters.length > 0 || rangeParts.length > 0) {
+    const filterText = [
+      ...activeFilters.map(
+        ([key, values]) => `${DIMENSION_MAP[key].code}: ${values.join(", ")}`,
+      ),
+      ...rangeParts,
+    ].join("  ·  ");
     const maxChars = Math.floor((pageW - margin * 2) / 3.1);
     const lines = wrapFilters(`ตัวกรอง: ${filterText}`, maxChars);
     doc.setFontSize(8.5);

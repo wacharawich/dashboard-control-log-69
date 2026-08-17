@@ -20,6 +20,7 @@ import {
   fmtDateTime,
   fmtNum,
   groupBySum,
+  isoToThai,
   topGroups,
   uniqueValues,
   type FilterKey,
@@ -91,7 +92,9 @@ export default function Dashboard() {
   const activeEntries = (Object.entries(filters) as [FilterKey, string[]][]).filter(
     ([, values]) => values && values.length > 0,
   );
-  const activeCount = activeEntries.length;
+  const range = filters.dateRange;
+  const rangeActive = !!(range?.from || range?.to);
+  const activeCount = activeEntries.length + (rangeActive ? 1 : 0);
 
   const setFilter = (key: FilterKey, value: string[]) =>
     setFilters((prev) => {
@@ -109,6 +112,16 @@ export default function Dashboard() {
       return next;
     });
   const resetFilters = () => setFilters({});
+  const setDateRange = (from: string, to: string) =>
+    setFilters((prev) => {
+      const next = { ...prev };
+      if (from || to) {
+        next.dateRange = { from: from || undefined, to: to || undefined };
+      } else {
+        delete next.dateRange;
+      }
+      return next;
+    });
 
   const handleExport = async (format: "csv" | "pdf") => {
     setExporting(format);
@@ -255,9 +268,41 @@ export default function Dashboard() {
             ))}
           </div>
 
+          <div className="mt-3 flex flex-wrap items-center gap-3 border-t border-border/60 pt-3">
+            <span className="font-mono text-[10px] font-semibold tracking-[0.14em] text-muted-foreground">
+              [DAT]
+            </span>
+            <span className="text-[11px] font-medium text-foreground/80">ช่วงเวลา</span>
+            <input
+              type="date"
+              aria-label="จากวันที่"
+              value={range?.from ?? ""}
+              onChange={(e) => setDateRange(e.target.value, range?.to ?? "")}
+              className="h-8 rounded-md border border-input bg-card px-2 font-mono text-[11.5px] text-foreground shadow-xs outline-none focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/40"
+            />
+            <span className="font-mono text-[11px] text-muted-foreground">→</span>
+            <input
+              type="date"
+              aria-label="ถึงวันที่"
+              value={range?.to ?? ""}
+              onChange={(e) => setDateRange(range?.from ?? "", e.target.value)}
+              className="h-8 rounded-md border border-input bg-card px-2 font-mono text-[11.5px] text-foreground shadow-xs outline-none focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/40"
+            />
+            {rangeActive && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-6 px-2 text-[11.5px] text-muted-foreground hover:text-foreground"
+                onClick={() => setDateRange("", "")}
+              >
+                ล้างช่วงเวลา
+              </Button>
+            )}
+          </div>
+
           <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-border/60 pt-3">
             <span className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
-              active <span className={activeCount > 0 ? "text-primary" : ""}>{activeCount}</span>/9
+              active <span className={activeCount > 0 ? "text-primary" : ""}>{activeCount}</span>/10
             </span>
             {activeEntries.map(([key, values]) =>
               values.map((value) => (
@@ -274,6 +319,20 @@ export default function Dashboard() {
                   <X className="size-3 opacity-60 group-hover:opacity-100" />
                 </button>
               )),
+            )}
+            {rangeActive && (
+              <button
+                type="button"
+                onClick={() => setDateRange("", "")}
+                className="group flex items-center gap-1.5 rounded-sm border border-primary/30 bg-primary/5 px-2 py-1 text-[11.5px] text-primary transition-colors hover:bg-primary/10"
+              >
+                <span className="font-mono text-[9px] font-semibold tracking-wider">DAT</span>
+                <span className="max-w-[220px] truncate">
+                  {range?.from ? isoToThai(range.from) : "…"} →{" "}
+                  {range?.to ? isoToThai(range.to) : "…"}
+                </span>
+                <X className="size-3 opacity-60 group-hover:opacity-100" />
+              </button>
             )}
             {activeCount > 0 && (
               <Button

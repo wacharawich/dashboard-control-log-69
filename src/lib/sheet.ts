@@ -16,7 +16,15 @@ export type FilterKey =
   | "planType";
 
 // multiple values can be selected per dimension (empty array = no filter)
-export type Filters = Partial<Record<FilterKey, string[]>>;
+export type Filters = Partial<Record<FilterKey, string[]>> & {
+  dateRange?: DateRange;
+};
+
+/** ช่วงเวลา filter — ISO dates (yyyy-mm-dd) applied to the เดือน column. */
+export interface DateRange {
+  from?: string;
+  to?: string;
+}
 
 export interface Dimension {
   key: FilterKey;
@@ -47,15 +55,31 @@ export function filterRows(
   filters: Filters,
   excludeKey?: FilterKey,
 ): SheetRow[] {
-  const keys = Object.keys(filters) as FilterKey[];
-  if (keys.length === 0) return rows;
-  return rows.filter((row) =>
-    keys.every((key) => {
+  const keys = (Object.keys(filters) as (FilterKey | "dateRange")[]).filter(
+    (k) => k !== "dateRange",
+  ) as FilterKey[];
+  const range = filters.dateRange;
+  const hasRange = !!range && !!(range.from || range.to);
+  if (keys.length === 0 && !hasRange) return rows;
+  return rows.filter((row) => {
+    if (hasRange && range) {
+      const key = dateKeyOf(row.date);
+      if (key === null) return false;
+      if (range.from) {
+        const fromKey = dateKeyOf(range.from);
+        if (fromKey !== null && key < fromKey) return false;
+      }
+      if (range.to) {
+        const toKey = dateKeyOf(range.to);
+        if (toKey !== null && key > toKey) return false;
+      }
+    }
+    return keys.every((key) => {
       if (key === excludeKey) return true;
       const values = filters[key];
       return !values || values.length === 0 || values.includes(row[key]);
-    }),
-  );
+    });
+  });
 }
 
 export interface Option {
@@ -81,14 +105,45 @@ export function uniqueValues(rows: SheetRow[], key: FilterKey): Option[] {
   return options;
 }
 
+const THAI_MONTHS = [
+  "ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย.",
+  "ก.ค.", "ส.ค.", "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค.",
+];
+
 function monthOrderOf(monthKey: string): number {
   const m = monthKey.match(/^(\S+)\s+(\d{4})$/);
   if (!m) return Number.MAX_SAFE_INTEGER;
-  const idx = [
-    "ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย.",
-    "ก.ค.", "ส.ค.", "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค.",
-  ].indexOf(m[1]);
+  const idx = THAI_MONTHS.indexOf(m[1]);
   return Number(m[2]) * 12 + (idx >= 0 ? idx : 0);
+}
+
+/**
+ * Parse a เดือน cell into a comparable date key (yyyyMMdd as a number).
+ * Supports full dates "19 ก.ย. 2025", month-only "ก.ย. 2025" (day = 1),
+ * and ISO "2025-09-19" (used by the ช่วงเวลา inputs). null = unparseable.
+ */
+export function dateKeyOf(value: string): number | null {
+  const s = String(value).trim();
+  let m = s.match(/^(\d{1,2})\s+(\S+)\s+(\d{4})$/);
+  if (m) {
+    const idx = THAI_MONTHS.indexOf(m[2]);
+    if (idx >= 0) return Number(m[3]) * 10000 + (idx + 1) * 100 + Number(m[1]);
+  }
+  m = s.match(/^(\S+)\s+(\d{4})$/);
+  if (m) {
+    const idx = THAI_MONTHS.indexOf(m[1]);
+    if (idx >= 0) return Number(m[2]) * 10000 + (idx + 1) * 100 + 1;
+  }
+  m = s.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (m) return Number(m[1]) * 10000 + Number(m[2]) * 100 + Number(m[3]);
+  return null;
+}
+
+/** "2025-01-19" -> "19 ม.ค. 2025" (for chips / PDF filter line). */
+export function isoToThai(iso: string): string {
+  const m = String(iso).match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!m) return String(iso);
+  return `${Number(m[3])} ${THAI_MONTHS[Number(m[2]) - 1]} ${m[1]}`;
 }
 
 export interface Group {

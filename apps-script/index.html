@@ -179,6 +179,22 @@
     .chip .chip-x { opacity: 0.55; font-size: 11px; line-height: 1; }
     .chip:hover .chip-x { opacity: 1; }
 
+    /* date range row */
+    .daterow {
+      display: flex; flex-wrap: wrap; align-items: center; gap: 10px;
+      border-top: 1px solid var(--line-soft); margin-top: 14px; padding-top: 12px;
+    }
+    .daterow .d-label { display: flex; align-items: baseline; gap: 8px; }
+    .daterow .d-label code { font-family: var(--mono); font-size: 10px; font-weight: 600; letter-spacing: 0.14em; color: var(--muted); }
+    .daterow .d-label span { font-size: 11px; font-weight: 500; color: rgba(44, 58, 48, 0.8); }
+    .daterow input[type="date"] {
+      height: 34px; padding: 0 9px;
+      border: 1px solid var(--line); background: var(--card); color: var(--ink);
+      border-radius: 6px; font: inherit; font-size: 12.5px; outline: none;
+    }
+    .daterow input[type="date"]:focus { border-color: rgba(47, 111, 79, 0.55); }
+    .daterow .d-arrow { font-family: var(--mono); font-size: 12px; color: var(--muted); }
+
     /* ---------- popover ---------- */
     #popoverBackdrop { position: fixed; inset: 0; z-index: 55; display: none; background: transparent; }
     #popover {
@@ -418,6 +434,13 @@
         </div>
         <div class="filters">
           <div class="filter-grid" id="filterGrid"></div>
+          <div class="daterow">
+            <span class="d-label"><code>[DAT]</code><span>ช่วงเวลา</span></span>
+            <input type="date" id="dateFrom" aria-label="จากวันที่">
+            <span class="d-arrow">→</span>
+            <input type="date" id="dateTo" aria-label="ถึงวันที่">
+            <button type="button" class="btn btn-ghost btn-sm" id="dateClearBtn" data-act="clear-date-range" hidden>ล้างช่วงเวลา</button>
+          </div>
           <div class="chips-row" id="chipsRow"></div>
         </div>
       </section>
@@ -553,6 +576,7 @@
     var loading = false;
     var loadError = null;
     var filters = {};          // key -> array of selected values
+    var dateRange = { from: "", to: "" };  // ช่วงเวลา (ISO yyyy-mm-dd)
     var groupByKey = "monthKey";
     var tableSort = "price-desc";
     var tablePage = 1;
@@ -587,8 +611,22 @@
     /* ---- data logic (mirrors src/lib/sheet.ts) ---- */
     function filterRows(rows, flt, excludeKey) {
       var keys = Object.keys(flt);
-      if (keys.length === 0) return rows;
+      var range = dateRange;
+      var hasRange = !!(range && (range.from || range.to));
+      if (keys.length === 0 && !hasRange) return rows;
       return rows.filter(function (row) {
+        if (hasRange) {
+          var dkey = dateKeyOf(row.date);
+          if (dkey === null) return false;
+          if (range.from) {
+            var fromKey = dateKeyOf(range.from);
+            if (fromKey !== null && dkey < fromKey) return false;
+          }
+          if (range.to) {
+            var toKey = dateKeyOf(range.to);
+            if (toKey !== null && dkey > toKey) return false;
+          }
+        }
         return keys.every(function (key) {
           if (key === excludeKey) return true;
           var values = flt[key];
@@ -610,6 +648,31 @@
         if (idx2 >= 0) return Number(m[2]) * 12 + idx2;
       }
       return Number.MAX_SAFE_INTEGER;
+    }
+
+    // "19 ก.ย. 2025" / "ก.ย. 2025" / "2025-09-19" -> yyyymmdd (number) / null
+    function dateKeyOf(value) {
+      var s = String(value).trim();
+      var m = s.match(/^(\d{1,2})\s+(\S+)\s+(\d{4})$/);
+      if (m) {
+        var idx = THAI_MONTHS.indexOf(m[2]);
+        if (idx >= 0) return Number(m[3]) * 10000 + (idx + 1) * 100 + Number(m[1]);
+      }
+      m = s.match(/^(\S+)\s+(\d{4})$/);
+      if (m) {
+        var idx2 = THAI_MONTHS.indexOf(m[1]);
+        if (idx2 >= 0) return Number(m[2]) * 10000 + (idx2 + 1) * 100 + 1;
+      }
+      m = s.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+      if (m) return Number(m[1]) * 10000 + Number(m[2]) * 100 + Number(m[3]);
+      return null;
+    }
+
+    // "2025-01-19" -> "19 ม.ค. 2025" (chips / PDF filter line)
+    function isoToThai(iso) {
+      var m = String(iso).match(/^(\d{4})-(\d{2})-(\d{2})$/);
+      if (!m) return String(iso);
+      return Number(m[3]) + " " + THAI_MONTHS[Number(m[2]) - 1] + " " + m[1];
     }
 
     function uniqueValues(rows, key) {
@@ -734,8 +797,9 @@
     function renderChips() {
       var row = document.getElementById("chipsRow");
       var entries = activeFilterEntries();
-      var activeCount = entries.length;
-      var html = '<span class="chips-note">active <b>' + activeCount + "</b>/9</span>";
+      var rangeOn = !!(dateRange.from || dateRange.to);
+      var activeCount = entries.length + (rangeOn ? 1 : 0);
+      var html = '<span class="chips-note">active <b>' + activeCount + "</b>/10</span>";
       entries.forEach(function (entry) {
         var key = entry[0], values = entry[1];
         values.forEach(function (value) {
@@ -743,9 +807,15 @@
             "<code>" + DIM_MAP[key].code + "</code><span>" + esc(value) + '</span><span class="chip-x">✕</span></button>';
         });
       });
-      if (entries.length) {
+      if (rangeOn) {
+        html += '<button type="button" class="chip" data-act="clear-date-range">' +
+          "<code>DAT</code><span>" + esc((dateRange.from ? isoToThai(dateRange.from) : "…") + " → " + (dateRange.to ? isoToThai(dateRange.to) : "…")) + '</span><span class="chip-x">✕</span></button>';
+      }
+      if (entries.length || rangeOn) {
         html += '<button type="button" class="btn btn-ghost btn-sm" data-act="reset-filters">ล้างทั้งหมด</button>';
       }
+      var clearBtn = document.getElementById("dateClearBtn");
+      if (clearBtn) clearBtn.hidden = !rangeOn;
       row.innerHTML = html;
     }
 
@@ -1075,7 +1145,7 @@
     /* ================= export ================= */
     function csvField(value) {
       var s = String(value);
-      return /[",\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+      return /[\",\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
     }
 
     function exportCSV() {
@@ -1120,10 +1190,14 @@
         "</tr>";
       }).join("");
 
-      var filtersLine = active.length
-        ? '<p id="printFilters">ตัวกรอง: ' + esc(active.map(function (e) {
-            return DIM_MAP[e[0]].code + ": " + e[1].join(", ");
-          }).join(" · ")) + "</p>"
+      var filterParts = active.map(function (e) {
+        return DIM_MAP[e[0]].code + ": " + e[1].join(", ");
+      });
+      if (dateRange.from || dateRange.to) {
+        filterParts.push("DAT: " + (dateRange.from ? isoToThai(dateRange.from) : "…") + " → " + (dateRange.to ? isoToThai(dateRange.to) : "…"));
+      }
+      var filtersLine = filterParts.length
+        ? '<p id="printFilters">ตัวกรอง: ' + esc(filterParts.join(" · ")) + "</p>"
         : "";
       var footer = totalCount > PRINT_MAX_ROWS
         ? "แสดง " + fmtNum(PRINT_MAX_ROWS) + " แถวแรกจาก " + fmtNum(totalCount) + " แถว (ส่งออก CSV เพื่อรับข้อมูลครบทั้งหมด)"
@@ -1183,6 +1257,15 @@
           }
           case "reset-filters":
             filters = {};
+            dateRange = { from: "", to: "" };
+            document.getElementById("dateFrom").value = "";
+            document.getElementById("dateTo").value = "";
+            render();
+            break;
+          case "clear-date-range":
+            dateRange = { from: "", to: "" };
+            document.getElementById("dateFrom").value = "";
+            document.getElementById("dateTo").value = "";
             render();
             break;
           case "group-by":
@@ -1245,6 +1328,13 @@
     document.addEventListener("change", function (e) {
       if (e.target && e.target.id === "tableSort") {
         tableSort = e.target.value;
+        tablePage = 1;
+        render();
+      } else if (e.target && (e.target.id === "dateFrom" || e.target.id === "dateTo")) {
+        var from = document.getElementById("dateFrom").value;
+        var to = document.getElementById("dateTo").value;
+        if (from || to) dateRange = { from: from, to: to };
+        else dateRange = { from: "", to: "" };
         tablePage = 1;
         render();
       }
