@@ -1,4 +1,3 @@
-import { getAuthUserId } from "@convex-dev/auth/server";
 import { internal } from "./_generated/api";
 import { Infer, v } from "convex/values";
 import { action, mutation, query } from "./_generated/server";
@@ -29,9 +28,6 @@ const THAI_MONTHS = [
   "พ.ย.",
   "ธ.ค.",
 ];
-
-/** ค่าที่อนุญาตสำหรับคอลัมน์ K สถานะ */
-export const STATUS_OPTIONS = ["เสนอ", "อนุมัติ", "ไม่อนุมัติ", "รอปรับแผน"] as const;
 
 /** Minimal RFC-4180-ish CSV parser (handles quoted fields, escaped quotes, newlines). */
 function parseCsv(text: string): string[][] {
@@ -113,7 +109,6 @@ function toRow(cells: string[]): SheetRow | null {
     type: c[7],
     price,
     planType: c[9] ?? "", // ประเภทแผน (column J)
-    status: c[10] ?? "", // สถานะ (column K)
   };
 }
 
@@ -195,63 +190,5 @@ export const getSheetData = query({
 export const refreshSheetData = mutation({
   handler: async (ctx) => {
     await ctx.runMutation(internal.sheetInternal.clearDataInternal);
-  },
-});
-
-/**
- * อัปเดตสถานะ (คอลัมน์ K) ของรายการหนึ่งใน Google Sheet.
- *
- * เส้นทาง: เว็บแอป → Convex action → POST ไปยัง Web App ของ Apps Script
- * (ต้องตั้งค่า APPS_SCRIPT_WEB_APP_URL ในหน้า Keys/API keys ด้วย URL ที่ได้จาก
- * Deploy > New deployment > Web app) → Apps Script เขียนลงชีต แล้ว Convex
- * patch ข้อมูลที่แคชไว้ให้สะท้อนผลทันทีโดยไม่ต้องรอ re-sync.
- */
-export const updateStatus = action({
-  args: { regNo: v.string(), status: v.string() },
-  handler: async (ctx, { regNo, status }) => {
-    const userId = await getAuthUserId(ctx);
-    if (userId === null) {
-      throw new Error("กรุณาเข้าสู่ระบบก่อนแก้ไขสถานะ");
-    }
-
-    if (!(STATUS_OPTIONS as readonly string[]).includes(status)) {
-      throw new Error(
-        `สถานะ "${status}" ไม่ถูกต้อง (ต้องเป็น ${STATUS_OPTIONS.join(" / ")})`,
-      );
-    }
-    if (!regNo.trim()) {
-      throw new Error("ไม่พบเลขทะเบียนคุมของรายการนี้");
-    }
-
-    const appUrl = process.env.APPS_SCRIPT_WEB_APP_URL;
-    if (!appUrl) {
-      throw new Error(
-        "ยังไม่ได้ตั้งค่า APPS_SCRIPT_WEB_APP_URL — deploy Web App ของ Apps Script แล้ววาง URL ในหน้า Keys/API keys (คีย์ชื่อ APPS_SCRIPT_WEB_APP_URL) แล้วลองอีกครั้ง",
-      );
-    }
-
-    const res = await fetch(appUrl, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ regNo: regNo.trim(), status }),
-    });
-    let data: { ok?: boolean; error?: string } | null = null;
-    try {
-      data = (await res.json()) as { ok?: boolean; error?: string } | null;
-    } catch {
-      data = null;
-    }
-    if (!res.ok) {
-      throw new Error(data?.error ?? `Google Apps Script ตอบกลับด้วยสถานะ ${res.status}`);
-    }
-    if (!data || data.ok !== true) {
-      throw new Error(data?.error ?? "Google Apps Script ไม่ยืนยันการอัปเดตสถานะ");
-    }
-
-    await ctx.runMutation(internal.sheetInternal.setStatusInternal, {
-      regNo: regNo.trim(),
-      status,
-    });
-    return { ok: true as const, status };
   },
 });

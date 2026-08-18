@@ -25,7 +25,6 @@ const EXPORT_HEADERS = [
   "หมวด",
   "ประเภท",
   "ประเภทแผน",
-  "สถานะ",
   "ราคาเสนอ",
 ] as const;
 
@@ -84,7 +83,6 @@ export function exportCSV(rows: SheetRow[]): void {
         row.category,
         row.type,
         row.planType,
-        row.status,
         row.price,
       ]
         .map(csvField)
@@ -225,7 +223,6 @@ export async function exportPDF(
       row.category,
       row.type,
       row.planType || "—",
-      row.status || "—",
       fmtBaht(row.price),
     ]),
     styles: {
@@ -247,17 +244,16 @@ export async function exportPDF(
     alternateRowStyles: { fillColor: [244, 242, 234] },
     columnStyles: {
       // explicit widths (mm) sized to the real data so most rows fit on one line
-      0: { cellWidth: 24 }, // เลขทะเบียนคุม
-      1: { cellWidth: 22 }, // เดือน
-      2: { cellWidth: 30 }, // กลุ่มภารกิจ
-      3: { cellWidth: 24 }, // กลุ่มงาน
-      4: { cellWidth: 24 }, // หน่วยงาน
-      5: { cellWidth: 44 }, // รายการ
-      6: { cellWidth: 20 }, // หมวด
-      7: { cellWidth: 22 }, // ประเภท
-      8: { cellWidth: 18 }, // ประเภทแผน
-      9: { cellWidth: 18 }, // สถานะ
-      10: { cellWidth: 27, halign: "right" }, // ราคาเสนอ
+      0: { cellWidth: 26 }, // เลขทะเบียนคุม
+      1: { cellWidth: 24 }, // เดือน
+      2: { cellWidth: 33 }, // กลุ่มภารกิจ
+      3: { cellWidth: 27 }, // กลุ่มงาน
+      4: { cellWidth: 26 }, // หน่วยงาน
+      5: { cellWidth: 48 }, // รายการ
+      6: { cellWidth: 21 }, // หมวด
+      7: { cellWidth: 24 }, // ประเภท
+      8: { cellWidth: 20 }, // ประเภทแผน
+      9: { cellWidth: 24, halign: "right" }, // ราคาเสนอ
     },
     didDrawPage: () => {
       const page = doc.getNumberOfPages();

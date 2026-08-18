@@ -30,7 +30,6 @@ export const sheetRowValidator = v.object({
   type: v.string(), // ประเภท (column H)
   price: v.number(), // ราคาเสนอ (column I)
   planType: v.string(), // ประเภทแผน (column J)
-  status: v.string(), // สถานะ (column K): เสนอ / อนุมัติ / ไม่อนุมัติ / รอปรับแผน
 });
 
 const schema = defineSchema(

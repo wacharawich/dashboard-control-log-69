@@ -33,24 +33,3 @@ export const insertMetaInternal = internalMutation({
     await ctx.db.insert("sheetMeta", { syncedAt, rowCount });
   },
 });
-
-/**
- * Patch สถานะ of one cached row (matched by เลขทะเบียนคุม) so the dashboard
- * reflects a write-back immediately instead of waiting for the next re-sync.
- */
-export const setStatusInternal = internalMutation({
-  args: { regNo: v.string(), status: v.string() },
-  handler: async (ctx, { regNo, status }) => {
-    const chunks = await ctx.db.query("sheetChunk").collect();
-    for (const chunk of chunks) {
-      const idx = chunk.rows.findIndex((r) => r.regNo === regNo);
-      if (idx >= 0) {
-        const rows = chunk.rows.slice();
-        rows[idx] = { ...rows[idx], status };
-        await ctx.db.patch(chunk._id, { rows });
-        return { updated: true, status };
-      }
-    }
-    return { updated: false, status };
-  },
-});

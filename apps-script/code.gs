@@ -1,166 +1,137 @@
 /**
  * ราคาเสนอ/terminal — Google Apps Script backend
+ * ------------------------------------------------
+ * - doGet()        : เสิร์ฟหน้าเว็บจากไฟล์ HTML ชื่อ "index"
+ * - getSheetData() : อ่านข้อมูลจาก Spreadsheet (คอลัมน์ A–J) แล้วคืนเป็น JSON ให้หน้าเว็บ
  *
- * ไฟล์นี้ทำหน้าที่ 2 อย่าง:
- * 1. doGet() เสิร์ฟหน้าเว็บ dashboard (ไฟล์ HTML ชื่อ "index")
- * 2. เขียน/อ่านข้อมูลจาก Google Sheet "sheet99" (คอลัมน์ A–K)
- *    - getSheetData()  อ่านข้อมูลทั้งหมดให้หน้าเว็บ
- *    - updateStatus()  อัปเดตสถานะ (คอลัมน์ K) เรียกจากหน้าเว็บผ่าน google.script.run
- *    - doPost()        รับ JSON { regNo, status } จากเว็บแอปหลัก (Convex action
- *                      ของโปรเจกต์ "ราคาเสนอ/terminal") เพื่อเขียนสถานะลงชีต
+ * คอลัมน์ในชีต:
+ *   A เลขทะเบียนคุม · B เดือน · C กลุ่มภารกิจ · D กลุ่มงาน · E หน่วยงาน
+ *   F รายการ · G หมวด · H ประเภท · I ราคาเสนอ · J ประเภทแผน
  *
- * คอลัมน์ของชีต:
- *   A เลขทะเบียนคุม · B เดือน · C กลุ่มภารกิจ · D กลุ่มงาน · E หน่วยงาน ·
- *   F รายการ · G หมวด · H ประเภท · I ราคาเสนอ · J ประเภทแผน · K สถานะ
+ * วิธีติดตั้ง: ดู apps-script/README.md (ต้องตั้งชื่อไฟล์ HTML ว่า "index" ตัวพิมพ์เล็ก)
  */
 
 var SHEET_ID = "1UtSyrAUOXdtRiztXbN4ntobPeS0fMErUrAIeK4NRxcw";
 var SHEET_NAME = "sheet99";
 
-/** ค่าที่อนุญาตสำหรับคอลัมน์ K สถานะ (ต้องตรงกับ Dropdown ในชีต) */
-var STATUS_OPTIONS = ["เสนอ", "อนุมัติ", "ไม่อนุมัติ", "รอปรับแผน"];
+// ถ้าคอลัมน์ เดือน (B) เป็นวันที่ (Date) ที่แสดงปี พ.ศ. ในชีต เช่น "19 ก.ย. 2568"
+// ให้เปลี่ยนเป็น true เพื่อให้หน้าเว็บแสดงปีแบบเดียวกันกับที่เห็นในชีต
+var USE_BUDDHIST_YEAR = false;
 
 var THAI_MONTHS = [
   "ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย.",
   "ก.ค.", "ส.ค.", "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค.",
 ];
 
-/**
- * เสิร์ฟหน้าเว็บ dashboard (ต้องมีไฟล์ HTML ชื่อ "index")
- */
+/** เสิร์ฟหน้าเว็บ (ต้องมีไฟล์ HTML ชื่อ "index" ในโปรเจกต์) */
 function doGet(e) {
   return HtmlService.createHtmlOutputFromFile("index")
-    .setTitle("ราคาเสนอ/terminal — ข้อมูลราคาเสนอ")
+    .setTitle("ราคาเสนอ/terminal")
     .addMetaTag("viewport", "width=device-width, initial-scale=1")
     .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
 }
 
 /**
- * อ่านข้อมูลทั้งหมดจากชีต (คอลัมน์ A–K) แล้วคืนเป็น JSON ให้หน้าเว็บ
+ * อ่านข้อมูลสดจาก Google Sheet แล้วคืนเป็น
+ * { rows: [...], syncedAt: ISO string, rowCount: number }
  */
 function getSheetData() {
   var ss = SpreadsheetApp.openById(SHEET_ID);
   var sheet = ss.getSheetByName(SHEET_NAME);
   if (!sheet) {
-    throw new Error('ไม่พบชีตชื่อ "' + SHEET_NAME + '" ใน Spreadsheet นี้');
+    throw new Error(
+      'ไม่พบชีต "' + SHEET_NAME + '" ใน Spreadsheet ที่กำหนด (ตรวจ SHEET_ID / SHEET_NAME ใน code.gs)'
+    );
   }
-  var values = sheet.getDataRange().getValues();
+
+  var lastRow = sheet.getLastRow();
+  var lastCol = Math.max(10, sheet.getLastColumn()); // อ่านอย่างน้อย A–J
+  var values = sheet.getRange(1, 1, lastRow, lastCol).getValues();
+  var tz = ss.getSpreadsheetTimeZone();
+
   var rows = [];
-  var start = values.length > 0 && String(values[0][0]).trim() === "เลขทะเบียนคุม" ? 1 : 0;
-  for (var i = start; i < values.length; i++) {
-    var c = values[i];
-    var price = parsePrice(c[8]);
+  for (var i = 0; i < values.length; i++) {
+    var r = values[i];
+    // ข้ามแถวหัวตารางถ้ามี
+    if (i === 0 && String(r[0] || "").trim() === "เลขทะเบียนคุม") continue;
+
+    var price = parsePrice(r[8]);
     if (price === null) continue; // ข้ามแถวที่ไม่มีราคาเสนอ
-    var month = normalizeMonth(String(c[1] == null ? "" : c[1]));
+
+    var dateText = formatMonth(r[1], tz);
     rows.push({
-      regNo: String(c[0] == null ? "" : c[0]).trim(),
-      date: String(c[1] == null ? "" : c[1]).trim(),
-      monthKey: month.monthKey,
-      monthOrder: month.monthOrder,
-      mission: String(c[2] == null ? "" : c[2]).trim(),
-      workGroup: String(c[3] == null ? "" : c[3]).trim(),
-      agency: String(c[4] == null ? "" : c[4]).trim(),
-      item: String(c[5] == null ? "" : c[5]).trim(),
-      category: String(c[6] == null ? "" : c[6]).trim(),
-      type: String(c[7] == null ? "" : c[7]).trim(),
-      price: price,
-      planType: String(c[9] == null ? "" : c[9]).trim(), // ประเภทแผน (column J)
-      status: String(c[10] == null ? "" : c[10]).trim(), // สถานะ (column K)
+      regNo: cell(r[0]),          // A เลขทะเบียนคุม
+      date: dateText,             // B เดือน (ข้อความเต็ม เช่น "19 ก.ย. 2025")
+      monthKey: monthKeyOf(dateText), // กลุ่มเดือน เช่น "ก.ย. 2025"
+      monthOrder: monthOrderOf(dateText),
+      mission: cell(r[2]),        // C กลุ่มภารกิจ
+      workGroup: cell(r[3]),      // D กลุ่มงาน
+      agency: cell(r[4]),         // E หน่วยงาน
+      item: cell(r[5]),           // F รายการ
+      category: cell(r[6]),       // G หมวด
+      type: cell(r[7]),           // H ประเภท
+      price: price,               // I ราคาเสนอ
+      planType: cell(r[9]),       // J ประเภทแผน
     });
   }
-  return { rows: rows, syncedAt: new Date().toISOString(), rowCount: rows.length };
+
+  if (rows.length === 0) {
+    throw new Error(
+      'ไม่พบข้อมูลที่ใช้ได้ในชีต "' + SHEET_NAME +
+      '" (ตรวจว่ามีคอลัมน์ A–J และคอลัมน์ I ราคาเสนอเป็นตัวเลข)'
+    );
+  }
+
+  return {
+    rows: rows,
+    syncedAt: new Date().toISOString(),
+    rowCount: rows.length,
+  };
 }
 
-/**
- * อัปเดตสถานะ (คอลัมน์ K) — เรียกจากหน้าเว็บ standalone ผ่าน google.script.run
- */
-function updateStatus(regNo, status) {
-  if (!regNo || String(regNo).trim() === "") {
-    throw new Error("ไม่พบเลขทะเบียนคุมของรายการนี้");
-  }
-  if (STATUS_OPTIONS.indexOf(status) === -1) {
-    throw new Error('สถานะ "' + status + '" ไม่ถูกต้อง (ต้องเป็น ' + STATUS_OPTIONS.join(" / ") + ")");
-  }
-  writeStatusToSheet(String(regNo).trim(), status);
-  return { ok: true, regNo: String(regNo).trim(), status: status };
+/* ---------------- helpers ---------------- */
+
+function cell(v) {
+  if (v === null || v === undefined) return "";
+  return String(v).trim();
 }
 
-/**
- * Webhook — รับ JSON { regNo, status } จากเว็บแอปหลัก (Convex action updateStatus
- * ในโปรเจกต์ React) แล้วเขียนสถานะลงชีต
- *
- * ตั้งค่าในโปรเจกต์หลัก: Deploy > New deployment > Web app แล้ววาง URL ที่ได้
- * ไว้ในหน้า Keys/API keys ของ Freebuff (ชื่อคีย์ APPS_SCRIPT_WEB_APP_URL)
- */
-function doPost(e) {
-  try {
-    var body = JSON.parse(e.postData.contents);
-    var regNo = String(body.regNo == null ? "" : body.regNo).trim();
-    var status = String(body.status == null ? "" : body.status).trim();
-    if (regNo === "") {
-      return jsonResponse({ ok: false, error: "ไม่พบเลขทะเบียนคุมของรายการนี้" }, 400);
-    }
-    if (STATUS_OPTIONS.indexOf(status) === -1) {
-      return jsonResponse(
-        { ok: false, error: 'สถานะ "' + status + '" ไม่ถูกต้อง (ต้องเป็น ' + STATUS_OPTIONS.join(" / ") + ")" },
-        400,
-      );
-    }
-    var updated = writeStatusToSheet(regNo, status);
-    if (!updated) {
-      return jsonResponse({ ok: false, error: 'ไม่พบเลขทะเบียนคุม "' + regNo + '" ในชีต' }, 404);
-    }
-    return jsonResponse({ ok: true, regNo: regNo, status: status }, 200);
-  } catch (err) {
-    return jsonResponse({ ok: false, error: String(err) }, 500);
-  }
-}
-
-/** เขียนสถานะลงคอลัมน์ K ของแถวที่เลขทะเบียนคุม (คอลัมน์ A) ตรงกัน */
-function writeStatusToSheet(regNo, status) {
-  var ss = SpreadsheetApp.openById(SHEET_ID);
-  var sheet = ss.getSheetByName(SHEET_NAME);
-  var values = sheet.getDataRange().getValues();
-  for (var i = 1; i < values.length; i++) {
-    if (String(values[i][0]).trim() === regNo) {
-      sheet.getRange(i + 1, 11).setValue(status); // column K
-      return true;
-    }
-  }
-  return false;
-}
-
-function jsonResponse(obj, code) {
-  return ContentService.createTextOutput(JSON.stringify(obj))
-    .setMimeType(ContentService.MimeType.JSON);
-}
-
-/** แปลง "19 ก.ย. 2025" / "ก.ย. 2025" -> { monthKey, monthOrder } */
-function normalizeMonth(raw) {
-  var text = String(raw).trim();
-  var m = text.match(/^(\d{1,2})\s+(\S+)\s+(\d{4})$/);
-  if (m) {
-    var idx = THAI_MONTHS.indexOf(m[2]);
-    var year = Number(m[3]);
-    if (idx >= 0 && isFinite(year)) {
-      return { monthKey: m[2] + " " + year, monthOrder: year * 12 + idx };
-    }
-  }
-  m = text.match(/^(\S+)\s+(\d{4})$/);
-  if (m) {
-    var idx2 = THAI_MONTHS.indexOf(m[1]);
-    var year2 = Number(m[2]);
-    if (idx2 >= 0 && isFinite(year2)) {
-      return { monthKey: m[1] + " " + year2, monthOrder: year2 * 12 + idx2 };
-    }
-  }
-  return { monthKey: text === "" ? "(ไม่มีข้อมูล)" : text, monthOrder: Number.MAX_SAFE_INTEGER };
-}
-
-/** แปลงราคา: ตัด , และเว้นวรรคออกแล้วแปลงเป็นตัวเลข */
+/** "1,234,567" / "1 234 567" / 1234567 -> 1234567 (null ถ้าไม่ใช่ตัวเลข) */
 function parsePrice(raw) {
-  var cleaned = String(raw == null ? "" : raw).replace(/[, ]/g, "").trim();
+  if (raw === null || raw === undefined) return null;
+  var cleaned = String(raw).replace(/[, ]/g, "").trim();
   if (cleaned === "") return null;
   var n = Number(cleaned);
   return isFinite(n) ? n : null;
+}
+
+/** แปลงค่าในคอลัมน์ เดือน เป็นข้อความ "d MMM yyyy" (รองรับทั้ง Date และ string) */
+function formatMonth(v, tz) {
+  if (v instanceof Date) {
+    var parts = Utilities.formatDate(v, tz, "yyyy-M-d").split("-");
+    var year = Number(parts[0]);
+    var month = Number(parts[1]);
+    var day = Number(parts[2]);
+    if (USE_BUDDHIST_YEAR) year += 543;
+    return day + " " + THAI_MONTHS[month - 1] + " " + year;
+  }
+  return cell(v);
+}
+
+/** "19 ก.ย. 2025" -> "ก.ย. 2025" (ไว้จัดกลุ่มรายเดือน) */
+function monthKeyOf(dateText) {
+  var m = String(dateText).match(/^(\d{1,2})\s+(\S+)\s+(\d{4})$/);
+  if (m) return m[2] + " " + m[3];
+  return String(dateText) || "(ไม่มีข้อมูล)";
+}
+
+/** ลำดับเวลาของเดือน (2025*12 + index) ใช้เรียงเดือนตามปฏิทิน */
+function monthOrderOf(dateText) {
+  var m = String(dateText).match(/^(\d{1,2})\s+(\S+)\s+(\d{4})$/);
+  if (m) {
+    var idx = THAI_MONTHS.indexOf(m[2]);
+    var year = Number(m[3]);
+    if (idx >= 0 && isFinite(year)) return year * 12 + idx;
+  }
+  return Number.MAX_SAFE_INTEGER;
 }
