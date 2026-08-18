@@ -1,22 +1,23 @@
 /**
- * ราคาเสนอ/terminal — Google Apps Script (backend)
- * =================================================
- * ใช้คู่กับไฟล์ index.html (วางในโปรเจกต์เดียวกัน)
+ * ราคาเสนอ/terminal — Google Apps Script backend
  *
- * - doGet()         : เสิร์ฟหน้าเว็บจากไฟล์ HTML ชื่อ "index"
- * - getSheetData()  : อ่านข้อมูลจาก Google Sheet (คอลัมน์ A–K) ส่งกลับเป็น JSON
- * - updateStatus()  : เขียนสถานะ (คอลัมน์ K) ของรายการหนึ่งกลับลงชีต
- * - doPost()        : รับคำขอ POST จากเว็บแอปภายนอก (เช่น Convex action)
- *                     body JSON: { regNo: "...", status: "..." }
+ * ไฟล์นี้ทำหน้าที่ 2 อย่าง:
+ * 1. doGet() เสิร์ฟหน้าเว็บ dashboard (ไฟล์ HTML ชื่อ "index")
+ * 2. เขียน/อ่านข้อมูลจาก Google Sheet "sheet99" (คอลัมน์ A–K)
+ *    - getSheetData()  อ่านข้อมูลทั้งหมดให้หน้าเว็บ
+ *    - updateStatus()  อัปเดตสถานะ (คอลัมน์ K) เรียกจากหน้าเว็บผ่าน google.script.run
+ *    - doPost()        รับ JSON { regNo, status } จากเว็บแอปหลัก (Convex action
+ *                      ของโปรเจกต์ "ราคาเสนอ/terminal") เพื่อเขียนสถานะลงชีต
  *
- * แก้ไขค่าคงที่ด้านล่างถ้าต้องการเปลี่ยน Spreadsheet / ชื่อชีต
+ * คอลัมน์ของชีต:
+ *   A เลขทะเบียนคุม · B เดือน · C กลุ่มภารกิจ · D กลุ่มงาน · E หน่วยงาน ·
+ *   F รายการ · G หมวด · H ประเภท · I ราคาเสนอ · J ประเภทแผน · K สถานะ
  */
+
 var SHEET_ID = "1UtSyrAUOXdtRiztXbN4ntobPeS0fMErUrAIeK4NRxcw";
 var SHEET_NAME = "sheet99";
 
-var HEADER_FIRST_CELL = "เลขทะเบียนคุม";
-
-// ค่าที่อนุญาตสำหรับคอลัมน์ K สถานะ
+/** ค่าที่อนุญาตสำหรับคอลัมน์ K สถานะ (ต้องตรงกับ Dropdown ในชีต) */
 var STATUS_OPTIONS = ["เสนอ", "อนุมัติ", "ไม่อนุมัติ", "รอปรับแผน"];
 
 var THAI_MONTHS = [
@@ -25,177 +26,141 @@ var THAI_MONTHS = [
 ];
 
 /**
- * Entry point ของ Web App — เสิร์ฟหน้าเว็บจากไฟล์ HTML "index"
- * (ชื่อไฟล์ต้องเป็น "index" ตัวพิมพ์เล็ก ห้ามเปลี่ยน)
+ * เสิร์ฟหน้าเว็บ dashboard (ต้องมีไฟล์ HTML ชื่อ "index")
  */
-function doGet() {
-  var html = HtmlService.createHtmlOutputFromFile("index");
-  html.setTitle("ราคาเสนอ/terminal — วิเคราะห์ราคาเสนอ");
-  html.addMetaTag("viewport", "width=device-width, initial-scale=1");
-  // ALLOWALL เผื่อเปิดหน้าใน iframe (เช่น ฝังในเว็บอื่น) — ถ้าไม่ต้องการให้ฝัง
-  // ให้ลบบรรทัดนี้ออก แล้ว Apps Script จะบล็อกการฝังโดยอัตโนมัติ
-  html.setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
-  return html;
+function doGet(e) {
+  return HtmlService.createHtmlOutputFromFile("index")
+    .setTitle("ราคาเสนอ/terminal — ข้อมูลราคาเสนอ")
+    .addMetaTag("viewport", "width=device-width, initial-scale=1")
+    .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
 }
 
 /**
- * รับคำขอ POST จากภายนอก (ใช้โดย Convex action ของเว็บแอปหลัก)
+ * อ่านข้อมูลทั้งหมดจากชีต (คอลัมน์ A–K) แล้วคืนเป็น JSON ให้หน้าเว็บ
+ */
+function getSheetData() {
+  var ss = SpreadsheetApp.openById(SHEET_ID);
+  var sheet = ss.getSheetByName(SHEET_NAME);
+  if (!sheet) {
+    throw new Error('ไม่พบชีตชื่อ "' + SHEET_NAME + '" ใน Spreadsheet นี้');
+  }
+  var values = sheet.getDataRange().getValues();
+  var rows = [];
+  var start = values.length > 0 && String(values[0][0]).trim() === "เลขทะเบียนคุม" ? 1 : 0;
+  for (var i = start; i < values.length; i++) {
+    var c = values[i];
+    var price = parsePrice(c[8]);
+    if (price === null) continue; // ข้ามแถวที่ไม่มีราคาเสนอ
+    var month = normalizeMonth(String(c[1] == null ? "" : c[1]));
+    rows.push({
+      regNo: String(c[0] == null ? "" : c[0]).trim(),
+      date: String(c[1] == null ? "" : c[1]).trim(),
+      monthKey: month.monthKey,
+      monthOrder: month.monthOrder,
+      mission: String(c[2] == null ? "" : c[2]).trim(),
+      workGroup: String(c[3] == null ? "" : c[3]).trim(),
+      agency: String(c[4] == null ? "" : c[4]).trim(),
+      item: String(c[5] == null ? "" : c[5]).trim(),
+      category: String(c[6] == null ? "" : c[6]).trim(),
+      type: String(c[7] == null ? "" : c[7]).trim(),
+      price: price,
+      planType: String(c[9] == null ? "" : c[9]).trim(), // ประเภทแผน (column J)
+      status: String(c[10] == null ? "" : c[10]).trim(), // สถานะ (column K)
+    });
+  }
+  return { rows: rows, syncedAt: new Date().toISOString(), rowCount: rows.length };
+}
+
+/**
+ * อัปเดตสถานะ (คอลัมน์ K) — เรียกจากหน้าเว็บ standalone ผ่าน google.script.run
+ */
+function updateStatus(regNo, status) {
+  if (!regNo || String(regNo).trim() === "") {
+    throw new Error("ไม่พบเลขทะเบียนคุมของรายการนี้");
+  }
+  if (STATUS_OPTIONS.indexOf(status) === -1) {
+    throw new Error('สถานะ "' + status + '" ไม่ถูกต้อง (ต้องเป็น ' + STATUS_OPTIONS.join(" / ") + ")");
+  }
+  writeStatusToSheet(String(regNo).trim(), status);
+  return { ok: true, regNo: String(regNo).trim(), status: status };
+}
+
+/**
+ * Webhook — รับ JSON { regNo, status } จากเว็บแอปหลัก (Convex action updateStatus
+ * ในโปรเจกต์ React) แล้วเขียนสถานะลงชีต
  *
- * ตัวอย่าง body (JSON):
- *   { "regNo": "69-0001", "status": "อนุมัติ" }
- *
- * หมายเหตุ: ต้อง deploy เป็น Web app (Execute as: Me, Who has access: Anyone)
- * แล้วเอา URL ที่ได้ไปตั้งเป็น APPS_SCRIPT_WEB_APP_URL ในเว็บแอปหลัก
+ * ตั้งค่าในโปรเจกต์หลัก: Deploy > New deployment > Web app แล้ววาง URL ที่ได้
+ * ไว้ในหน้า Keys/API keys ของ Freebuff (ชื่อคีย์ APPS_SCRIPT_WEB_APP_URL)
  */
 function doPost(e) {
-  var out = { ok: false, error: "คำขอไม่ถูกต้อง" };
   try {
     var body = JSON.parse(e.postData.contents);
-    if (body && body.regNo && body.status) {
-      out = updateStatus(body.regNo, body.status);
-    } else {
-      out = { ok: false, error: "ต้องระบุ regNo และ status ในคำขอ" };
+    var regNo = String(body.regNo == null ? "" : body.regNo).trim();
+    var status = String(body.status == null ? "" : body.status).trim();
+    if (regNo === "") {
+      return jsonResponse({ ok: false, error: "ไม่พบเลขทะเบียนคุมของรายการนี้" }, 400);
     }
+    if (STATUS_OPTIONS.indexOf(status) === -1) {
+      return jsonResponse(
+        { ok: false, error: 'สถานะ "' + status + '" ไม่ถูกต้อง (ต้องเป็น ' + STATUS_OPTIONS.join(" / ") + ")" },
+        400,
+      );
+    }
+    var updated = writeStatusToSheet(regNo, status);
+    if (!updated) {
+      return jsonResponse({ ok: false, error: 'ไม่พบเลขทะเบียนคุม "' + regNo + '" ในชีต' }, 404);
+    }
+    return jsonResponse({ ok: true, regNo: regNo, status: status }, 200);
   } catch (err) {
-    out = { ok: false, error: "อ่านข้อมูลจากคำขอไม่สำเร็จ: " + err };
+    return jsonResponse({ ok: false, error: String(err) }, 500);
   }
-  return ContentService.createTextOutput(JSON.stringify(out))
+}
+
+/** เขียนสถานะลงคอลัมน์ K ของแถวที่เลขทะเบียนคุม (คอลัมน์ A) ตรงกัน */
+function writeStatusToSheet(regNo, status) {
+  var ss = SpreadsheetApp.openById(SHEET_ID);
+  var sheet = ss.getSheetByName(SHEET_NAME);
+  var values = sheet.getDataRange().getValues();
+  for (var i = 1; i < values.length; i++) {
+    if (String(values[i][0]).trim() === regNo) {
+      sheet.getRange(i + 1, 11).setValue(status); // column K
+      return true;
+    }
+  }
+  return false;
+}
+
+function jsonResponse(obj, code) {
+  return ContentService.createTextOutput(JSON.stringify(obj))
     .setMimeType(ContentService.MimeType.JSON);
 }
 
-/**
- * เขียนสถานะ (คอลัมน์ K) ของรายการลงชีต โดยค้นหาจากเลขทะเบียนคุม (คอลัมน์ A)
- * คืนค่า: { ok: true, ... } หรือ { ok: false, error: "ข้อความ" }
- * เรียกได้จากหน้าเว็บ (google.script.run.updateStatus) หรือจาก doPost
- */
-function updateStatus(regNo, status) {
-  try {
-    if (STATUS_OPTIONS.indexOf(status) === -1) {
-      return { ok: false, error: 'สถานะ "' + status + '" ไม่ถูกต้อง (ต้องเป็น ' + STATUS_OPTIONS.join(" / ") + ") " };
-    }
-    var key = String(regNo).trim();
-    if (key === "") {
-      return { ok: false, error: "ไม่พบเลขทะเบียนคุม" };
-    }
-
-    var ss = SpreadsheetApp.openById(SHEET_ID);
-    var sheet = ss.getSheetByName(SHEET_NAME);
-    if (!sheet) {
-      return { ok: false, error: 'ไม่พบชีต "' + SHEET_NAME + '" ใน Spreadsheet นี้' };
-    }
-
-    var values = sheet.getDataRange().getValues();
-    var start = 0;
-    if (values.length > 0 && String(values[0][0]).trim() === HEADER_FIRST_CELL) {
-      start = 1; // ข้ามแถวหัวตาราง
-    }
-
-    var target = -1;
-    for (var i = start; i < values.length; i++) {
-      if (String(values[i][0]).trim() === key) {
-        target = i;
-        break;
-      }
-    }
-    if (target === -1) {
-      return { ok: false, error: 'ไม่พบเลขทะเบียนคุม "' + key + '" ในชีต' };
-    }
-
-    sheet.getRange(target + 1, 11).setValue(status); // คอลัมน์ K = 11
-    return { ok: true, updated: 1, regNo: key, status: status };
-  } catch (e) {
-    var msg = String(e && e.message ? e.message : e);
-    return { ok: false, error: msg };
-  }
-}
-
-/**
- * อ่านข้อมูลทั้งหมดจากชีต แล้วคืนเป็นอาร์เรย์ของ object
- * ที่ฝั่ง frontend (index.html) นำไปกรอง/วาดกราฟได้ทันที
- *
- * คอลัมน์ในชีต:
- *   A เลขทะเบียนคุม · B เดือน · C กลุ่มภารกิจ · D กลุ่มงาน · E หน่วยงาน
- *   F รายการ · G หมวด · H ประเภท · I ราคาเสนอ · J ประเภทแผน · K สถานะ
- *
- * คืนค่า: { rows: [...] } หรือ { error: "ข้อความ" } เมื่อมีปัญหา
- * (คืนในรูป object แทนการ throw เพื่อให้ frontend แสดงข้อผิดพลาดภาษาไทยได้ชัดเจน)
- */
-function getSheetData() {
-  try {
-    var ss = SpreadsheetApp.openById(SHEET_ID);
-    var sheet = ss.getSheetByName(SHEET_NAME);
-    if (!sheet) {
-      throw new Error('ไม่พบชีต "' + SHEET_NAME + '" ใน Spreadsheet นี้');
-    }
-
-    var values = sheet.getDataRange().getValues();
-    var start = 0;
-    if (values.length > 0 && String(values[0][0]).trim() === HEADER_FIRST_CELL) {
-      start = 1; // ข้ามแถวหัวตาราง
-    }
-
-    var rows = [];
-    for (var i = start; i < values.length; i++) {
-      var row = parseRow(values[i]);
-      if (row) rows.push(row);
-    }
-
-    if (rows.length === 0) {
-      throw new Error('ไม่พบข้อมูลในชีต "' + SHEET_NAME + '" (ตรวจสอบคอลัมน์ I ราคาเสนอ)');
-    }
-
-    return { rows: rows };
-  } catch (e) {
-    var msg = String(e && e.message ? e.message : e);
-    // Apps Script ปกปิดข้อความ error ฝั่ง server จาก client — ส่งเป็น data ปกติแทน
-    return { error: msg };
-  }
-}
-
-/** แปลงหนึ่งแถว (array ของค่าในเซล) เป็น object ข้อมูล; คืน null ถ้าแถวไม่สมบูรณ์ */
-function parseRow(cells) {
-  var c = cells.map(function (v) {
-    return v == null ? "" : String(v).trim();
-  });
-  var price = parsePrice(c[8]);
-  if (price === null) return null; // ไม่มีราคาเสนอ = ข้ามแถว
-
-  var m = normalizeMonth(c[1]);
-  return {
-    regNo: c[0],          // A เลขทะเบียนคุม
-    date: c[1],           // B เดือน (ค่าดิบ เช่น "19 ก.ย. 2025" / "ก.ย. 2025")
-    monthKey: m.key,      // "ก.ย. 2025" สำหรับจัดกลุ่ม
-    monthOrder: m.order,  // ตัวเลขใช้เรียงลำดับเดือน
-    mission: c[2],        // C กลุ่มภารกิจ
-    workGroup: c[3],      // D กลุ่มงาน
-    agency: c[4],         // E หน่วยงาน
-    item: c[5],           // F รายการ
-    category: c[6],       // G หมวด
-    type: c[7],           // H ประเภท
-    price: price,         // I ราคาเสนอ (ตัวเลข)
-    planType: c[9] || "", // J ประเภทแผน (ในแผน/นอกแผน/ทดแทน)
-    status: c[10] || ""   // K สถานะ (เสนอ/อนุมัติ/ไม่อนุมัติ/รอปรับแผน)
-  };
-}
-
-/** "1,234.50" / "1 234" -> ตัวเลข; null ถ้าแปลงไม่ได้หรือว่าง */
-function parsePrice(raw) {
-  var cleaned = String(raw).replace(/[, ]/g, "").trim();
-  if (cleaned === "") return null;
-  var n = Number(cleaned);
-  return isFinite(n) ? n : null;
-}
-
-/** "19 ก.ย. 2025" -> { key: "ก.ย. 2025", order: 2025*12+8 } */
+/** แปลง "19 ก.ย. 2025" / "ก.ย. 2025" -> { monthKey, monthOrder } */
 function normalizeMonth(raw) {
-  var s = String(raw).trim();
-  var m = s.match(/^(\d{1,2})\s+(\S+)\s+(\d{4})$/);
+  var text = String(raw).trim();
+  var m = text.match(/^(\d{1,2})\s+(\S+)\s+(\d{4})$/);
   if (m) {
     var idx = THAI_MONTHS.indexOf(m[2]);
     var year = Number(m[3]);
     if (idx >= 0 && isFinite(year)) {
-      return { key: m[2] + " " + year, order: year * 12 + idx };
+      return { monthKey: m[2] + " " + year, monthOrder: year * 12 + idx };
     }
   }
-  return { key: s || "(ไม่มีข้อมูล)", order: Number.MAX_SAFE_INTEGER };
+  m = text.match(/^(\S+)\s+(\d{4})$/);
+  if (m) {
+    var idx2 = THAI_MONTHS.indexOf(m[1]);
+    var year2 = Number(m[2]);
+    if (idx2 >= 0 && isFinite(year2)) {
+      return { monthKey: m[1] + " " + year2, monthOrder: year2 * 12 + idx2 };
+    }
+  }
+  return { monthKey: text === "" ? "(ไม่มีข้อมูล)" : text, monthOrder: Number.MAX_SAFE_INTEGER };
+}
+
+/** แปลงราคา: ตัด , และเว้นวรรคออกแล้วแปลงเป็นตัวเลข */
+function parsePrice(raw) {
+  var cleaned = String(raw == null ? "" : raw).replace(/[, ]/g, "").trim();
+  if (cleaned === "") return null;
+  var n = Number(cleaned);
+  return isFinite(n) ? n : null;
 }
