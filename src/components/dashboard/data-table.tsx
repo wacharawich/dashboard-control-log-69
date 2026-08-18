@@ -18,7 +18,15 @@ import {
 import { fmtBaht, fmtNum, type SheetRow } from "@/lib/sheet";
 import { cn } from "@/lib/utils";
 import { useAction } from "convex/react";
-import { AlertTriangle, ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
+import {
+  AlertTriangle,
+  ArrowDown,
+  ArrowUp,
+  ArrowUpDown,
+  ChevronLeft,
+  ChevronRight,
+  Loader2,
+} from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 
@@ -34,19 +42,33 @@ const STATUS_STYLES: Record<string, string> = {
   "รอปรับแผน": "border-amber-600/40 bg-amber-500/10 text-amber-800",
 };
 
-type SortKey = "price-desc" | "price-asc" | "regNo" | "date" | "agency";
+type SortDirection = "asc" | "desc";
+type SortField =
+  | "regNo"
+  | "date"
+  | "mission"
+  | "workGroup"
+  | "agency"
+  | "item"
+  | "category"
+  | "type"
+  | "planType"
+  | "status"
+  | "price";
 
-const SORT_OPTIONS: { value: SortKey; label: string }[] = [
-  { value: "price-desc", label: "ราคาเสนอ ▾ (มาก → น้อย)" },
-  { value: "price-asc", label: "ราคาเสนอ ▴ (น้อย → มาก)" },
-  { value: "date", label: "เดือน (ใหม่ล่าสุด)" },
-  { value: "regNo", label: "เลขทะเบียนคุม" },
-  { value: "agency", label: "หน่วยงาน (ก–ฮ)" },
-];
+interface SortState {
+  field: SortField;
+  dir: SortDirection;
+}
 
-const COLUMNS = [
+const COLUMNS: {
+  key: SortField;
+  label: string;
+  className?: string;
+  align?: "left" | "right";
+}[] = [
   { key: "regNo", label: "เลขทะเบียนคุม", className: "font-mono text-[11.5px]" },
-  { key: "date", label: "เดือน", className: "text-[12px] whitespace-nowrap" },
+  { key: "date", label: "เดือน", className: "text-[12px]" },
   { key: "mission", label: "กลุ่มภารกิจ" },
   { key: "workGroup", label: "กลุ่มงาน" },
   { key: "agency", label: "หน่วยงาน" },
@@ -55,14 +77,69 @@ const COLUMNS = [
   { key: "type", label: "ประเภท" },
   { key: "planType", label: "ประเภทแผน" },
   { key: "status", label: "สถานะ" },
-  { key: "price", label: "ราคาเสนอ" },
-] as const;
+  { key: "price", label: "ราคาเสนอ", align: "right" },
+];
+
+/** Thai month names → sortable order */
+function monthOrderOf(date: string): number {
+  const m = date.match(/^(\d{1,2})\s+(\S+)\s+(\d{4})$/);
+  if (!m) return 0;
+  const idx = [
+    "ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย.",
+    "ก.ค.", "ส.ค.", "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค.",
+  ].indexOf(m[2]);
+  return Number(m[3]) * 100 + (idx >= 0 ? idx : 0);
+}
+
+function compareField(
+  field: SortField,
+  a: SheetRow,
+  b: SheetRow,
+  dir: SortDirection,
+): number {
+  let cmp = 0;
+  switch (field) {
+    case "price":
+      cmp = a.price - b.price;
+      break;
+    case "regNo":
+      cmp = a.regNo.localeCompare(b.regNo);
+      break;
+    case "date":
+      cmp = monthOrderOf(a.date) - monthOrderOf(b.date) || a.date.localeCompare(b.date);
+      break;
+    case "mission":
+      cmp = a.mission.localeCompare(b.mission, "th");
+      break;
+    case "workGroup":
+      cmp = a.workGroup.localeCompare(b.workGroup, "th");
+      break;
+    case "agency":
+      cmp = a.agency.localeCompare(b.agency, "th");
+      break;
+    case "item":
+      cmp = a.item.localeCompare(b.item, "th");
+      break;
+    case "category":
+      cmp = a.category.localeCompare(b.category, "th");
+      break;
+    case "type":
+      cmp = a.type.localeCompare(b.type, "th");
+      break;
+    case "planType":
+      cmp = (a.planType || "").localeCompare(b.planType || "", "th");
+      break;
+    case "status":
+      cmp = (a.status || "").localeCompare(b.status || "", "th");
+      break;
+  }
+  return dir === "asc" ? cmp : -cmp;
+}
 
 export function DataTable({ rows }: { rows: SheetRow[] }) {
   const [page, setPage] = useState(1);
-  const [sort, setSort] = useState<SortKey>("price-desc");
+  const [sort, setSort] = useState<SortState>({ field: "price", dir: "desc" });
   const updateStatus = useAction(api.sheet.updateStatus);
-  // key = เลขทะเบียนคุม, value = สถานะการบันทึกปัจจุบันของแถวนั้น
   const [pending, setPending] = useState<Record<string, "saving" | "error">>({});
 
   const handleStatusChange = async (regNo: string, status: string) => {
@@ -77,7 +154,6 @@ export function DataTable({ rows }: { rows: SheetRow[] }) {
       toast.success(`สถานะ ${regNo} → ${status} บันทึกลง Google Sheets แล้ว`);
     } catch (e) {
       setPending((prev) => ({ ...prev, [regNo]: "error" }));
-      // ลบสถานะ error หลัง 3.5 วินาที (Select จะกลับไปเป็นค่าจริงจาก Convex เอง)
       window.setTimeout(() => {
         setPending((prev) => {
           const next = { ...prev };
@@ -94,32 +170,22 @@ export function DataTable({ rows }: { rows: SheetRow[] }) {
     }
   };
 
-  // reset to the first page whenever the filtered dataset changes
+  const toggleSort = (field: SortField) => {
+    setSort((prev) =>
+      prev.field === field
+        ? { field, dir: prev.dir === "asc" ? "desc" : "asc" }
+        : { field, dir: "asc" },
+    );
+  };
+
+  // reset page when filtered dataset changes
   useEffect(() => {
     setPage(1);
   }, [rows]);
 
   const sorted = useMemo(() => {
     const copy = [...rows];
-    switch (sort) {
-      case "price-desc":
-        copy.sort((a, b) => b.price - a.price);
-        break;
-      case "price-asc":
-        copy.sort((a, b) => a.price - b.price);
-        break;
-      case "regNo":
-        copy.sort((a, b) => a.regNo.localeCompare(b.regNo));
-        break;
-      case "date":
-        copy.sort(
-          (a, b) => monthOrderOf(b.date) - monthOrderOf(a.date) || b.date.localeCompare(a.date),
-        );
-        break;
-      case "agency":
-        copy.sort((a, b) => a.agency.localeCompare(b.agency, "th"));
-        break;
-    }
+    copy.sort((a, b) => compareField(sort.field, a, b, sort.dir));
     return copy;
   }, [rows, sort]);
 
@@ -130,71 +196,105 @@ export function DataTable({ rows }: { rows: SheetRow[] }) {
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex items-center justify-between gap-3">
-        <p className="font-mono text-[11px] text-muted-foreground">
-          rows <span className="text-primary">{fmtNum(sorted.length)}</span>{" "}
-          / {fmtNum(rows.length)} ผ่านตัวกรอง
-        </p>
-        <Select value={sort} onValueChange={(v) => setSort(v as SortKey)}>
-          <SelectTrigger size="sm" className="h-8 w-[220px] text-[12px]">
-            <SelectValue placeholder="เรียงตาม" />
-          </SelectTrigger>
-          <SelectContent>
-            {SORT_OPTIONS.map((o) => (
-              <SelectItem key={o.value} value={o.value} className="text-[12px]">
-                {o.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
+      <p className="font-mono text-[11px] text-muted-foreground">
+        rows <span className="text-primary">{fmtNum(sorted.length)}</span>{" "}
+        / {fmtNum(rows.length)} ผ่านตัวกรอง
+        <span className="ml-3 text-muted-foreground/60">
+          · เลือกหัวข้อเพื่อเรียงลำดับ
+        </span>
+      </p>
 
       <div className="overflow-x-auto rounded-md border border-border bg-card">
         <Table className="min-w-[1160px]">
           <TableHeader>
             <TableRow className="border-border/70 hover:bg-transparent">
-              {COLUMNS.map((col) => (
-                <TableHead
-                  key={col.key}
-                  className="bg-muted/40 font-mono text-[10px] font-semibold uppercase tracking-wider text-muted-foreground"
-                >
-                  {col.label}
-                </TableHead>
-              ))}
+              {COLUMNS.map((col) => {
+                const active = sort.field === col.key;
+                return (
+                  <TableHead
+                    key={col.key}
+                    className={cn(
+                      "group cursor-pointer select-none bg-muted/40 font-mono text-[10px] font-semibold uppercase tracking-wider text-muted-foreground transition-colors hover:bg-muted/70 hover:text-foreground",
+                      active && "bg-primary/5 text-primary hover:bg-primary/10",
+                      col.align === "right" && "text-right",
+                    )}
+                    onClick={() => toggleSort(col.key)}
+                  >
+                    <span className="inline-flex items-center gap-1">
+                      {col.label}
+                      <span className="inline-flex shrink-0 opacity-40 group-hover:opacity-80 transition-opacity">
+                        {active ? (
+                          sort.dir === "asc" ? (
+                            <ArrowUp className="size-3" />
+                          ) : (
+                            <ArrowDown className="size-3" />
+                          )
+                        ) : (
+                          <ArrowUpDown className="size-3" />
+                        )}
+                      </span>
+                    </span>
+                  </TableHead>
+                );
+              })}
             </TableRow>
           </TableHeader>
           <TableBody>
             {pageRows.length === 0 ? (
               <TableRow className="hover:bg-transparent">
-                <TableCell colSpan={COLUMNS.length} className="h-24 text-center text-[13px] text-muted-foreground">
+                <TableCell
+                  colSpan={COLUMNS.length}
+                  className="h-24 text-center text-[13px] text-muted-foreground"
+                >
                   ไม่พบรายการที่ตรงกับตัวกรอง
                 </TableCell>
               </TableRow>
             ) : (
               pageRows.map((row, i) => (
-                <TableRow key={`${row.regNo}-${i}`} className="border-border/50">
+                <TableRow
+                  key={`${row.regNo}-${i}`}
+                  className="border-border/50"
+                >
                   <TableCell className="whitespace-nowrap font-mono text-[11.5px] text-foreground/90">
                     {row.regNo}
                   </TableCell>
                   <TableCell className="whitespace-nowrap text-[12px]">
                     {row.date}
                   </TableCell>
-                  <TableCell className="max-w-[160px] truncate text-[12px]" title={row.mission}>
+                  <TableCell
+                    className="max-w-[160px] truncate text-[12px]"
+                    title={row.mission}
+                  >
                     {row.mission}
                   </TableCell>
-                  <TableCell className="max-w-[140px] truncate text-[12px]" title={row.workGroup}>
+                  <TableCell
+                    className="max-w-[140px] truncate text-[12px]"
+                    title={row.workGroup}
+                  >
                     {row.workGroup}
                   </TableCell>
-                  <TableCell className="max-w-[140px] truncate text-[12px]" title={row.agency}>
+                  <TableCell
+                    className="max-w-[140px] truncate text-[12px]"
+                    title={row.agency}
+                  >
                     {row.agency}
                   </TableCell>
-                  <TableCell className="max-w-[220px] truncate text-[12px]" title={row.item}>
+                  <TableCell
+                    className="max-w-[220px] truncate text-[12px]"
+                    title={row.item}
+                  >
                     {row.item}
                   </TableCell>
-                  <TableCell className="max-w-[150px] truncate text-[12px]" title={row.category}>
+                  <TableCell
+                    className="max-w-[150px] truncate text-[12px]"
+                    title={row.category}
+                  >
                     {row.category}
                   </TableCell>
-                  <TableCell className="max-w-[150px] truncate text-[12px]" title={row.type}>
+                  <TableCell
+                    className="max-w-[150px] truncate text-[12px]"
+                    title={row.type}
+                  >
                     {row.type}
                   </TableCell>
                   <TableCell className="whitespace-nowrap text-[12px]">
@@ -304,14 +404,4 @@ function StatusSelect({
       </SelectContent>
     </Select>
   );
-}
-
-function monthOrderOf(date: string): number {
-  const m = date.match(/^(\d{1,2})\s+(\S+)\s+(\d{4})$/);
-  if (!m) return 0;
-  const idx = [
-    "ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย.",
-    "ก.ค.", "ส.ค.", "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค.",
-  ].indexOf(m[2]);
-  return Number(m[3]) * 100 + (idx >= 0 ? idx : 0);
 }
