@@ -20,6 +20,7 @@ import { cn } from "@/lib/utils";
 import { useAction } from "convex/react";
 import { AlertTriangle, ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
+import { toast } from "sonner";
 
 const PAGE_SIZE = 12;
 
@@ -73,6 +74,7 @@ export function DataTable({ rows }: { rows: SheetRow[] }) {
         delete next[regNo];
         return next;
       });
+      toast.success(`สถานะ ${regNo} → ${status} บันทึกลง Google Sheets แล้ว`);
     } catch (e) {
       setPending((prev) => ({ ...prev, [regNo]: "error" }));
       // ลบสถานะ error หลัง 3.5 วินาที (Select จะกลับไปเป็นค่าจริงจาก Convex เอง)
@@ -83,6 +85,11 @@ export function DataTable({ rows }: { rows: SheetRow[] }) {
           return next;
         });
       }, 3500);
+      toast.error(
+        e instanceof Error
+          ? e.message
+          : `อัปเดตสถานะ ${regNo} ไม่สำเร็จ — ลองใหม่อีกครั้ง`,
+      );
       console.error("อัปเดตสถานะไม่สำเร็จ", regNo, e);
     }
   };
