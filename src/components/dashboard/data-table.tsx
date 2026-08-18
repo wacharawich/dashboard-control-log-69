@@ -1,3 +1,4 @@
+import { api } from "@/convex/_generated/api";
 import { Button } from "@/components/ui/button";
 import {
   Select,
@@ -15,10 +16,22 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { fmtBaht, fmtNum, type SheetRow } from "@/lib/sheet";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { useAction } from "convex/react";
+import { AlertTriangle, ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 
 const PAGE_SIZE = 12;
+
+/** ค่าที่อนุญาตสำหรับคอลัมน์ K สถานะ (ต้องตรงกับในชีต) */
+const STATUS_OPTIONS = ["เสนอ", "อนุมัติ", "ไม่อนุมัติ", "รอปรับแผน"];
+
+const STATUS_STYLES: Record<string, string> = {
+  เสนอ: "border-primary/40 bg-primary/5 text-primary",
+  อนุมัติ: "border-emerald-600/40 bg-emerald-500/10 text-emerald-800",
+  ไม่อนุมัติ: "border-red-600/40 bg-red-500/10 text-red-800",
+  "รอปรับแผน": "border-amber-600/40 bg-amber-500/10 text-amber-800",
+};
 
 type SortKey = "price-desc" | "price-asc" | "regNo" | "date" | "agency";
 
@@ -40,12 +53,39 @@ const COLUMNS = [
   { key: "category", label: "หมวด" },
   { key: "type", label: "ประเภท" },
   { key: "planType", label: "ประเภทแผน" },
+  { key: "status", label: "สถานะ" },
   { key: "price", label: "ราคาเสนอ" },
 ] as const;
 
 export function DataTable({ rows }: { rows: SheetRow[] }) {
   const [page, setPage] = useState(1);
   const [sort, setSort] = useState<SortKey>("price-desc");
+  const updateStatus = useAction(api.sheet.updateStatus);
+  // key = เลขทะเบียนคุม, value = สถานะการบันทึกปัจจุบันของแถวนั้น
+  const [pending, setPending] = useState<Record<string, "saving" | "error">>({});
+
+  const handleStatusChange = async (regNo: string, status: string) => {
+    setPending((prev) => ({ ...prev, [regNo]: "saving" }));
+    try {
+      await updateStatus({ regNo, status });
+      setPending((prev) => {
+        const next = { ...prev };
+        delete next[regNo];
+        return next;
+      });
+    } catch (e) {
+      setPending((prev) => ({ ...prev, [regNo]: "error" }));
+      // ลบสถานะ error หลัง 3.5 วินาที (Select จะกลับไปเป็นค่าจริงจาก Convex เอง)
+      window.setTimeout(() => {
+        setPending((prev) => {
+          const next = { ...prev };
+          delete next[regNo];
+          return next;
+        });
+      }, 3500);
+      console.error("อัปเดตสถานะไม่สำเร็จ", regNo, e);
+    }
+  };
 
   // reset to the first page whenever the filtered dataset changes
   useEffect(() => {
@@ -153,6 +193,14 @@ export function DataTable({ rows }: { rows: SheetRow[] }) {
                   <TableCell className="whitespace-nowrap text-[12px]">
                     {row.planType || "—"}
                   </TableCell>
+                  <TableCell className="whitespace-nowrap">
+                    <StatusSelect
+                      regNo={row.regNo}
+                      value={row.status}
+                      pending={pending[row.regNo]}
+                      onSelect={handleStatusChange}
+                    />
+                  </TableCell>
                   <TableCell className="whitespace-nowrap text-right font-mono text-[12px] font-medium tabular-nums text-primary">
                     {fmtBaht(row.price)}
                   </TableCell>
@@ -196,6 +244,58 @@ export function DataTable({ rows }: { rows: SheetRow[] }) {
         </div>
       </div>
     </div>
+  );
+}
+
+function StatusSelect({
+  regNo,
+  value,
+  pending,
+  onSelect,
+}: {
+  regNo: string;
+  value: string;
+  pending?: "saving" | "error";
+  onSelect: (regNo: string, status: string) => void;
+}) {
+  if (pending === "saving") {
+    return (
+      <span className="inline-flex h-7 items-center gap-1.5 rounded-sm border border-border/70 bg-muted/40 px-2 font-mono text-[10.5px] text-muted-foreground">
+        <Loader2 className="size-3 animate-spin" />
+        saving
+      </span>
+    );
+  }
+  if (pending === "error") {
+    return (
+      <span className="inline-flex h-7 items-center gap-1.5 rounded-sm border border-red-600/40 bg-red-500/10 px-2 font-mono text-[10.5px] text-red-800">
+        <AlertTriangle className="size-3" />
+        ล้มเหลว — ลองใหม่
+      </span>
+    );
+  }
+  return (
+    <Select
+      value={value || undefined}
+      onValueChange={(v) => onSelect(regNo, v)}
+    >
+      <SelectTrigger
+        size="sm"
+        className={cn(
+          "h-7 w-[118px] text-[12px]",
+          value ? STATUS_STYLES[value] ?? "" : "text-muted-foreground",
+        )}
+      >
+        <SelectValue placeholder="—" />
+      </SelectTrigger>
+      <SelectContent>
+        {STATUS_OPTIONS.map((opt) => (
+          <SelectItem key={opt} value={opt} className="text-[12.5px]">
+            {opt}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
   );
 }
 

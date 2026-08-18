@@ -263,6 +263,14 @@
     .c-regno { font-family: "JetBrains Mono", monospace; font-size: 11.5px; white-space: nowrap; }
     .c-price { text-align: right; font-family: "JetBrains Mono", "Prompt", monospace; font-size: 12px; font-weight: 500; color: var(--green); white-space: nowrap; }
     .c-txt { max-width: 190px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .status-select {
+      height: 26px; min-width: 104px;
+      border: 1px solid var(--border-strong); background: var(--card); border-radius: 5px;
+      padding: 0 5px; font-family: "Prompt"; font-size: 11.5px; color: var(--text); outline: none; cursor: pointer;
+    }
+    .status-select:focus { border-color: var(--green); box-shadow: 0 0 0 2px rgba(47, 111, 79, 0.15); }
+    .status-select:disabled { opacity: 0.55; cursor: wait; }
+    .status-saving { font-family: "JetBrains Mono", monospace; font-size: 10.5px; color: var(--muted); }
     .empty-cell { text-align: center; color: var(--muted); height: 96px; }
     .table-footer { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; padding: 14px 20px 0; }
     .pager-info { font-family: "JetBrains Mono", monospace; font-size: 11px; color: var(--muted); }
@@ -488,7 +496,7 @@
               <thead>
                 <tr>
                   <th>เลขทะเบียนคุม</th><th>เดือน</th><th>กลุ่มภารกิจ</th><th>กลุ่มงาน</th><th>หน่วยงาน</th>
-                  <th>รายการ</th><th>หมวด</th><th>ประเภท</th><th>ประเภทแผน</th><th>ราคาเสนอ</th>
+                  <th>รายการ</th><th>หมวด</th><th>ประเภท</th><th>ประเภทแผน</th><th>สถานะ</th><th>ราคาเสนอ</th>
                 </tr>
               </thead>
               <tbody id="table-body"></tbody>
@@ -525,13 +533,13 @@
     <div class="report-filters" id="print-filters"></div>
     <table class="report-table">
       <colgroup>
-        <col style="width:8.5%"><col style="width:8%"><col style="width:11.5%"><col style="width:10%"><col style="width:10.5%">
-        <col style="width:16.5%"><col style="width:8%"><col style="width:8.5%"><col style="width:6.5%"><col style="width:12%">
+        <col style="width:8%"><col style="width:7.5%"><col style="width:11%"><col style="width:9.5%"><col style="width:10%">
+        <col style="width:15%"><col style="width:7.5%"><col style="width:8%"><col style="width:6%"><col style="width:8%"><col style="width:9.5%">
       </colgroup>
       <thead>
         <tr>
           <th>เลขทะเบียนคุม</th><th>เดือน</th><th>กลุ่มภารกิจ</th><th>กลุ่มงาน</th><th>หน่วยงาน</th>
-          <th>รายการ</th><th>หมวด</th><th>ประเภท</th><th>ประเภทแผน</th><th>ราคาเสนอ</th>
+          <th>รายการ</th><th>หมวด</th><th>ประเภท</th><th>ประเภทแผน</th><th>สถานะ</th><th>ราคาเสนอ</th>
         </tr>
       </thead>
       <tbody id="print-table-body"></tbody>
@@ -575,9 +583,10 @@
     var AMBER = "#a16207";
     var PLAN_ORDER = ["ในแผน", "นอกแผน", "ทดแทน"];
     var PLAN_COLORS = { "ในแผน": "#2f6f4f", "นอกแผน": "#a16207", "ทดแทน": "#7a8a7f" };
+    var STATUS_OPTIONS = ["เสนอ", "อนุมัติ", "ไม่อนุมัติ", "รอปรับแผน"];
     var PAGE_SIZE = 20;
     var MAX_PDF_ROWS = 500;
-    var EXPORT_HEADERS = ["เลขทะเบียนคุม", "เดือน", "กลุ่มภารกิจ", "กลุ่มงาน", "หน่วยงาน", "รายการ", "หมวด", "ประเภท", "ประเภทแผน", "ราคาเสนอ"];
+    var EXPORT_HEADERS = ["เลขทะเบียนคุม", "เดือน", "กลุ่มภารกิจ", "กลุ่มงาน", "หน่วยงาน", "รายการ", "หมวด", "ประเภท", "ประเภทแผน", "สถานะ", "ราคาเสนอ"];
 
     // ---------- state ----------
     var state = {
@@ -829,6 +838,7 @@
 
     function togglePop(key) {
       var pop = $id("f-" + key + "-pop");
+      // keep
       var willOpen = pop.hidden;
       closeAllPops();
       if (willOpen) {
