@@ -159,12 +159,15 @@ export default function Dashboard() {
       <header className="sticky top-0 z-30 border-b border-border/70 bg-background/85 backdrop-blur">
         <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-3 px-4 py-3 sm:px-6">
           <div className="flex items-center gap-2.5">
-            <div className="flex size-8 items-center justify-center rounded-md border border-primary/30 bg-primary/10 font-mono text-[13px] font-bold text-primary">
-              $_ 
-            </div>
+            <img
+              src="/logo.svg"
+              alt="โลโก้โรงพยาบาลนางรอง"
+              className="size-9 shrink-0 rounded-full border border-border/70 bg-white object-cover"
+            />
             <div className="leading-tight">
               <p className="text-sm font-semibold tracking-tight">
-                ราคาเสนอ<span className="text-primary">/</span>terminal
+                ทะเบียนคุมแผนจัดซื้อจัดจ้าง{" "}
+                <span className="text-primary">โรงพยาบาลนางรอง</span>
               </p>
               <p className="font-mono text-[10px] text-muted-foreground">
                 {SHEET_REF} · sheet99
@@ -476,7 +479,7 @@ export default function Dashboard() {
         </motion.div>
 
         <footer className="flex flex-wrap items-center justify-between gap-2 border-t border-border/60 pt-5 pb-2 font-mono text-[10.5px] text-muted-foreground">
-          <span>ราคาเสนอ/terminal · interactive data dashboard</span>
+          <span>ทะเบียนคุมแผนจัดซื้อจัดจ้าง โรงพยาบาลนางรอง · interactive data dashboard</span>
           <span>
             {SHEET_REF} · sheet99 · อัปเดตล่าสุด{" "}
             {loaded && !syncing ? fmtDateTime(meta?.syncedAt) : "…"}
