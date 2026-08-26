@@ -1,6 +1,6 @@
 import { DataTable } from "@/components/dashboard/data-table";
 import { FilterCombobox } from "@/components/dashboard/filter-combobox";
-import { AgencyBars, PriceBars, ShareDonut } from "@/components/dashboard/terminal-charts";
+import { AgencyBars, PriceBars } from "@/components/dashboard/terminal-charts";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -73,14 +73,23 @@ export default function Dashboard() {
     () => groupBySum(filtered, groupBy).slice(0, 12),
     [filtered, groupBy],
   );
-  const categoryGroups = useMemo(
-    () => topGroups(groupBySum(filtered, "category"), 7),
-    [filtered],
-  );
-  const agencyGroups = useMemo(
-    () => groupBySum(filtered, "agency").slice(0, 10),
-    [filtered],
-  );
+
+  // TOP 10 per dimension for section 04 (horizontal bars)
+  const topTenByDim = useMemo(() => {
+    const keys: FilterKey[] = [
+      "mission",
+      "workGroup",
+      "agency",
+      "item",
+      "category",
+      "type",
+    ];
+    return keys.map((key) => ({
+      key,
+      dim: DIMENSION_MAP[key],
+      groups: groupBySum(filtered, key).slice(0, 10),
+    }));
+  }, [filtered]);
 
   const planTypeStats = useMemo(() => {
     const byName = new Map(groupBySum(filtered, "planType").map((g) => [g.name, g]));
@@ -401,73 +410,55 @@ export default function Dashboard() {
           </Card>
         </motion.div>
 
-        {/* 04 — secondary charts */}
-        <div className="grid gap-4 lg:grid-cols-5">
-          <motion.div
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.35, delay: 0.1 }}
-            className="lg:col-span-2"
-          >
-            <Card className="h-full gap-0 border-border/80 py-5 shadow-none">
-              <CardHeader className="px-5">
-                <CardTitle className="text-[15px] font-medium">สัดส่วนตามหมวด</CardTitle>
-                <p className="mt-1 font-mono text-[11px] text-muted-foreground">
-                  group by CAT · share of total
-                </p>
-              </CardHeader>
-              <CardContent className="px-5">
-                {categoryGroups.length === 0 ? (
-                  <EmptyChart label="ไม่มีข้อมูล" />
-                ) : (
-                  <ShareDonut groups={categoryGroups} total={total} />
-                )}
-              </CardContent>
-            </Card>
-          </motion.div>
+        {/* 04 — top 10 per dimension */}
+        <div className="grid gap-4 lg:grid-cols-2">
 
-          <motion.div
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.35, delay: 0.15 }}
-            className="lg:col-span-3"
-          >
-            <Card className="h-full gap-0 border-border/80 py-5 shadow-none">
-              <CardHeader className="px-5">
-                <CardTitle className="text-[15px] font-medium">TOP 10 หน่วยงาน</CardTitle>
-                <p className="mt-1 font-mono text-[11px] text-muted-foreground">
-                  group by AGT · sum ราคาเสนอ
-                </p>
-              </CardHeader>
-              <CardContent className="px-5">
-                {agencyGroups.length === 0 ? (
-                  <EmptyChart label="ไม่มีข้อมูล" />
-                ) : (
-                  <AgencyBars groups={agencyGroups} />
-                )}
-              </CardContent>
-            </Card>
-          </motion.div>
-
-          <motion.div
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.35, delay: 0.2 }}
-            className="lg:col-span-5"
-          >
-            <Card className="h-full gap-0 border-border/80 py-5 shadow-none">
-              <CardHeader className="px-5">
-                <CardTitle className="text-[15px] font-medium">สถิติแยกตามประเภทแผน</CardTitle>
-                <p className="mt-1 font-mono text-[11px] text-muted-foreground">
-                  group by PLN · ในแผน / นอกแผน / ทดแทน · sum ราคาเสนอ
-                </p>
-              </CardHeader>
-              <CardContent className="px-5">
-                <PlanTypeBreakdown stats={planTypeStats} total={total} />
-              </CardContent>
-            </Card>
-          </motion.div>
+          {topTenByDim.map(({ key, dim, groups }, i) => (
+            <motion.div
+              key={key}
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.35, delay: 0.08 + i * 0.04 }}
+            >
+              <Card className="h-full gap-0 border-border/80 py-5 shadow-none">
+                <CardHeader className="px-5">
+                  <CardTitle className="text-[15px] font-medium">
+                    TOP 10 {dim.label}
+                  </CardTitle>
+                  <p className="mt-1 font-mono text-[11px] text-muted-foreground">
+                    group by {dim.code} · sum ราคาเสนอ · top {groups.length}
+                  </p>
+                </CardHeader>
+                <CardContent className="px-5">
+                  {groups.length === 0 ? (
+                    <EmptyChart label="ไม่มีข้อมูล" />
+                  ) : (
+                    <AgencyBars groups={groups} />
+                  )}
+                </CardContent>
+              </Card>
+            </motion.div>
+          ))}
         </div>
+
+        {/* 05 — plan types */}
+        <motion.div
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.35, delay: 0.2 }}
+        >
+          <Card className="gap-0 border-border/80 py-5 shadow-none">
+            <CardHeader className="px-5">
+              <CardTitle className="text-[15px] font-medium">สถิติแยกตามประเภทแผน</CardTitle>
+              <p className="mt-1 font-mono text-[11px] text-muted-foreground">
+                group by PLN · ในแผน / นอกแผน / ทดแทน · sum ราคาเสนอ
+              </p>
+            </CardHeader>
+            <CardContent className="px-5">
+              <PlanTypeBreakdown stats={planTypeStats} total={total} />
+            </CardContent>
+          </Card>
+        </motion.div>
 
         {/* 05 — data table */}
         <SectionHeader index="05" code="ROWS" title="ข้อมูลทั้งหมด" />

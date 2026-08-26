@@ -9,13 +9,25 @@ import {
 } from "@/components/ui/table";
 import { fmtBaht, fmtNum, type SheetRow } from "@/lib/sheet";
 import { cn } from "@/lib/utils";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ArrowDown, ArrowUp, ArrowUpDown, ChevronLeft, ChevronRight } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 
 const PAGE_SIZE = 12;
 
+type SortField =
+  | "regNo"
+  | "date"
+  | "mission"
+  | "workGroup"
+  | "agency"
+  | "item"
+  | "category"
+  | "type"
+  | "planType"
+  | "price";
+type SortDir = "asc" | "desc";
 
-const COLUMNS: { key: string; label: string; className?: string }[] = [
+const COLUMNS: { key: SortField; label: string; className?: string; align?: "right" }[] = [
   { key: "regNo", label: "เลขทะเบียนคุม", className: "font-mono text-[11.5px]" },
   { key: "date", label: "เดือน", className: "text-[12px]" },
   { key: "mission", label: "กลุ่มภารกิจ" },
@@ -25,29 +37,52 @@ const COLUMNS: { key: string; label: string; className?: string }[] = [
   { key: "category", label: "หมวด" },
   { key: "type", label: "ประเภท" },
   { key: "planType", label: "ประเภทแผน" },
-  { key: "price", label: "ราคาเสนอ" },
+  { key: "price", label: "ราคาเสนอ", align: "right" },
 ];
 
-/** Thai month names → sortable order */
-function monthOrderOf(date: string): number {
-  const m = date.match(/^(\d{1,2})\s+(\S+)\s+(\d{4})$/);
-  if (!m) return 0;
-  const idx = [
-    "ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย.",
-    "ก.ค.", "ส.ค.", "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค.",
-  ].indexOf(m[2]);
-  return Number(m[3]) * 100 + (idx >= 0 ? idx : 0);
+function compareField(field: SortField, a: SheetRow, b: SheetRow, dir: SortDir): number {
+  let cmp: number;
+  switch (field) {
+    case "price":
+      cmp = a.price - b.price;
+      break;
+    case "regNo":
+      cmp = a.regNo.localeCompare(b.regNo);
+      break;
+    case "date":
+      // monthOrder comes from Convex parse — chronological key for the เดือน column
+      cmp = a.monthOrder - b.monthOrder || a.date.localeCompare(b.date);
+      break;
+    default:
+      cmp = String(a[field] ?? "").localeCompare(String(b[field] ?? ""), "th");
+  }
+  return dir === "asc" ? cmp : -cmp;
 }
 
 export function DataTable({ rows }: { rows: SheetRow[] }) {
   const [page, setPage] = useState(1);
+  const [sort, setSort] = useState<{ field: SortField; dir: SortDir }>({
+    field: "price",
+    dir: "desc",
+  });
 
-  // reset page when filtered dataset changes
+  const toggleSort = (field: SortField) =>
+    setSort((prev) =>
+      prev.field === field
+        ? { field, dir: prev.dir === "asc" ? "desc" : "asc" }
+        : { field, dir: "asc" },
+    );
+
+  // reset page when filtered dataset or sort changes
   useEffect(() => {
     setPage(1);
   }, [rows]);
 
-  const sorted = rows;
+  const sorted = useMemo(() => {
+    const copy = [...rows];
+    copy.sort((a, b) => compareField(sort.field, a, b, sort.dir));
+    return copy;
+  }, [rows, sort]);
 
   const pageCount = Math.max(1, Math.ceil(sorted.length / PAGE_SIZE));
   const safePage = Math.min(page, pageCount);
@@ -65,17 +100,36 @@ export function DataTable({ rows }: { rows: SheetRow[] }) {
         <Table className="min-w-[1080px]">
           <TableHeader>
             <TableRow className="border-border/70 hover:bg-transparent">
-              {COLUMNS.map((col) => (
-                <TableHead
-                  key={col.key}
-                  className={cn(
-                    "bg-muted/40 font-mono text-[10px] font-semibold uppercase tracking-wider text-muted-foreground",
-                    col.className,
-                  )}
-                >
-                  {col.label}
-                </TableHead>
-              ))}
+              {COLUMNS.map((col) => {
+                const active = sort.field === col.key;
+                return (
+                  <TableHead
+                    key={col.key}
+                    className={cn(
+                      "group cursor-pointer select-none bg-muted/40 font-mono text-[10px] font-semibold uppercase tracking-wider transition-colors hover:bg-muted/70 hover:text-foreground",
+                      active ? "text-primary" : "text-muted-foreground",
+                      col.align === "right" && "text-right",
+                      col.className,
+                    )}
+                    onClick={() => toggleSort(col.key)}
+                  >
+                    <span className="inline-flex items-center gap-1">
+                      {col.label}
+                      <span className="inline-flex shrink-0 opacity-40 transition-opacity group-hover:opacity-80">
+                        {active ? (
+                          sort.dir === "asc" ? (
+                            <ArrowUp className="size-3" />
+                          ) : (
+                            <ArrowDown className="size-3" />
+                          )
+                        ) : (
+                          <ArrowUpDown className="size-3" />
+                        )}
+                      </span>
+                    </span>
+                  </TableHead>
+                );
+              })}
             </TableRow>
           </TableHeader>
           <TableBody>
