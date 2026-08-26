@@ -1,12 +1,5 @@
 import { Button } from "@/components/ui/button";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
   Table,
   TableBody,
   TableCell,
@@ -21,15 +14,6 @@ import { useEffect, useMemo, useState } from "react";
 
 const PAGE_SIZE = 12;
 
-type SortKey = "price-desc" | "price-asc" | "regNo" | "date" | "agency";
-
-const SORT_OPTIONS: { value: SortKey; label: string }[] = [
-  { value: "price-desc", label: "ราคาเสนอ ▾ (มาก → น้อย)" },
-  { value: "price-asc", label: "ราคาเสนอ ▴ (น้อย → มาก)" },
-  { value: "date", label: "เดือน (ใหม่ล่าสุด)" },
-  { value: "regNo", label: "เลขทะเบียนคุม" },
-  { value: "agency", label: "หน่วยงาน (ก–ฮ)" },
-];
 
 const COLUMNS: { key: string; label: string; className?: string }[] = [
   { key: "regNo", label: "เลขทะเบียนคุม", className: "font-mono text-[11.5px]" },
@@ -57,36 +41,13 @@ function monthOrderOf(date: string): number {
 
 export function DataTable({ rows }: { rows: SheetRow[] }) {
   const [page, setPage] = useState(1);
-  const [sort, setSort] = useState<SortKey>("price-desc");
 
   // reset page when filtered dataset changes
   useEffect(() => {
     setPage(1);
   }, [rows]);
 
-  const sorted = useMemo(() => {
-    const copy = [...rows];
-    switch (sort) {
-      case "price-desc":
-        copy.sort((a, b) => b.price - a.price);
-        break;
-      case "price-asc":
-        copy.sort((a, b) => a.price - b.price);
-        break;
-      case "regNo":
-        copy.sort((a, b) => a.regNo.localeCompare(b.regNo));
-        break;
-      case "date":
-        copy.sort(
-          (a, b) => monthOrderOf(b.date) - monthOrderOf(a.date) || b.date.localeCompare(a.date),
-        );
-        break;
-      case "agency":
-        copy.sort((a, b) => a.agency.localeCompare(b.agency, "th"));
-        break;
-    }
-    return copy;
-  }, [rows, sort]);
+  const sorted = rows;
 
   const pageCount = Math.max(1, Math.ceil(sorted.length / PAGE_SIZE));
   const safePage = Math.min(page, pageCount);
@@ -95,24 +56,10 @@ export function DataTable({ rows }: { rows: SheetRow[] }) {
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex items-center justify-between gap-3">
-        <p className="font-mono text-[11px] text-muted-foreground">
-          rows <span className="text-primary">{fmtNum(sorted.length)}</span>{" "}
-          / {fmtNum(rows.length)} ผ่านตัวกรอง
-        </p>
-        <Select value={sort} onValueChange={(v) => setSort(v as SortKey)}>
-          <SelectTrigger size="sm" className="h-8 w-[220px] text-[12px]">
-            <SelectValue placeholder="เรียงตาม" />
-          </SelectTrigger>
-          <SelectContent>
-            {SORT_OPTIONS.map((o) => (
-              <SelectItem key={o.value} value={o.value} className="text-[12px]">
-                {o.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
+      <p className="font-mono text-[11px] text-muted-foreground">
+        rows <span className="text-primary">{fmtNum(sorted.length)}</span>{" "}
+        / {fmtNum(rows.length)} ผ่านตัวกรอง
+      </p>
 
       <div className="overflow-x-auto rounded-md border border-border bg-card">
         <Table className="min-w-[1080px]">
