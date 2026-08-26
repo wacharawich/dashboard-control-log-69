@@ -73,10 +73,10 @@ export function DataTable({ rows }: { rows: SheetRow[] }) {
         : { field, dir: "asc" },
     );
 
-  // reset page when filtered dataset or sort changes
+  // reset to first page when filtered dataset or sort column/direction changes
   useEffect(() => {
     setPage(1);
-  }, [rows]);
+  }, [rows, sort]);
 
   const sorted = useMemo(() => {
     const copy = [...rows];
