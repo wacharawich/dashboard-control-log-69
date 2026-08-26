@@ -61,18 +61,21 @@ function compareField(field: SortField, a: SheetRow, b: SheetRow, dir: SortDir):
 
 /** Case-insensitive match across every text column + ราคาเสนอ digits. */
 function matchesQuery(row: SheetRow, q: string): boolean {
-  return (
-    row.regNo.includes(q) ||
-    row.date.includes(q) ||
-    row.mission.includes(q) ||
-    row.workGroup.includes(q) ||
-    row.agency.includes(q) ||
-    row.item.includes(q) ||
-    row.category.includes(q) ||
-    row.type.includes(q) ||
-    row.planType.includes(q) ||
-    String(row.price).includes(q)
-  );
+  const hay = [
+    row.regNo,
+    row.date,
+    row.mission,
+    row.workGroup,
+    row.agency,
+    row.item,
+    row.category,
+    row.type,
+    row.planType,
+    String(row.price),
+  ]
+    .join("\u0000")
+    .toLowerCase();
+  return hay.includes(q);
 }
 
 export function DataTable({ rows }: { rows: SheetRow[] }) {
