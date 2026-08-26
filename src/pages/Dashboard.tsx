@@ -160,7 +160,7 @@ export default function Dashboard() {
         <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-3 px-4 py-3 sm:px-6">
           <div className="flex items-center gap-2.5">
             <img
-              src="/logo.svg"
+              src="/logo.png"
               alt="โลโก้โรงพยาบาลนางรอง"
               className="size-9 shrink-0 rounded-full border border-border/70 bg-white object-cover"
             />
