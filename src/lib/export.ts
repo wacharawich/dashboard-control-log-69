@@ -1,4 +1,5 @@
 import {
+  ceToBe,
   DIMENSION_MAP,
   fmtBaht,
   fmtNum,
@@ -75,7 +76,7 @@ export function exportCSV(rows: SheetRow[]): void {
     lines.push(
       [
         row.regNo,
-        row.date,
+        ceToBe(row.date),
         row.mission,
         row.workGroup,
         row.agency,
@@ -153,7 +154,7 @@ export async function exportPDF(
   const shown = sorted.slice(0, MAX_PDF_ROWS);
 
   // header band
-  const created = `สร้างเมื่อ: ${new Date().toLocaleString("th-TH", {
+  const created = `สร้างเมื่อ: ${new Date().toLocaleString("th-TH-u-ca-buddhist", {
     day: "2-digit",
     month: "long",
     year: "numeric",
@@ -215,7 +216,7 @@ export async function exportPDF(
     head: [EXPORT_HEADERS as unknown as string[]],
     body: shown.map((row) => [
       row.regNo,
-      row.date,
+      ceToBe(row.date),
       row.mission,
       row.workGroup,
       row.agency,

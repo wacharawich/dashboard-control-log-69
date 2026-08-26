@@ -16,7 +16,7 @@ import { cn } from "@/lib/utils";
 import { Check, ChevronDown, X } from "lucide-react";
 import { useMemo, useState } from "react";
 import type { Dimension, Option } from "@/lib/sheet";
-import { fmtNum } from "@/lib/sheet";
+import { ceToBe, fmtNum } from "@/lib/sheet";
 
 interface Props {
   dim: Dimension;
@@ -49,7 +49,7 @@ export function FilterCombobox({ dim, value, options, onChange }: Props) {
   const triggerLabel = !active
     ? "ทั้งหมด"
     : value.length <= 2
-      ? value.join(" · ")
+      ? value.map(ceToBe).join(" · ")
       : `${value.length} รายการ`;
 
   return (
@@ -155,7 +155,7 @@ export function FilterCombobox({ dim, value, options, onChange }: Props) {
                       >
                         {selected && <Check className="size-3" />}
                       </span>
-                      <span className="flex-1 truncate text-[13px]">{option.value}</span>
+                      <span className="flex-1 truncate text-[13px]">{ceToBe(option.value)}</span>
                       <span className="ml-2 shrink-0 font-mono text-[10px] text-muted-foreground">
                         {fmtNum(option.count)}
                       </span>

@@ -1,5 +1,5 @@
 import { cn } from "@/lib/utils";
-import { fmtBaht, fmtCompact, fmtNum, type Group } from "@/lib/sheet";
+import { ceToBe, fmtBaht, fmtCompact, fmtNum, type Group } from "@/lib/sheet";
 import {
   Bar,
   BarChart,
@@ -47,7 +47,7 @@ function TermTooltip({
   return (
     <div className="rounded-md border border-border bg-card px-3 py-2 shadow-sm">
       <p className="max-w-[240px] text-[11px] font-medium text-foreground">
-        {label ?? g.name}
+        {ceToBe(label ?? g.name)}
       </p>
       <p className="mt-1 font-mono text-[11px] text-primary">
         {fmtBaht(g.sum)}
@@ -80,7 +80,7 @@ export function PriceBars({ groups, total }: { groups: Group[]; total: number })
             angle={-24}
             textAnchor="end"
             height={58}
-            tickFormatter={(v: string) => truncate(v, 16)}
+            tickFormatter={(v: string) => truncate(ceToBe(v), 16)}
           />
           <YAxis
             tickFormatter={(v: number) => fmtCompact(v)}
@@ -183,7 +183,7 @@ export function AgencyBars({ groups }: { groups: Group[] }) {
             tick={{ fontSize: 10.5, fill: "#56594d", fontFamily: "Prompt" }}
             tickLine={false}
             axisLine={false}
-            tickFormatter={(v: string) => truncate(v, 17)}
+            tickFormatter={(v: string) => truncate(ceToBe(v), 17)}
           />
           <Tooltip cursor={{ fill: "oklch(0.93 0.012 95 / 0.5)" }} content={<TermTooltip total={0} />} />
           <Bar dataKey="sum" radius={[0, 3, 3, 0]} maxBarSize={18} barSize={16}>

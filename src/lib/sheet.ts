@@ -143,7 +143,8 @@ export function dateKeyOf(value: string): number | null {
 export function isoToThai(iso: string): string {
   const m = String(iso).match(/^(\d{4})-(\d{2})-(\d{2})$/);
   if (!m) return String(iso);
-  return `${Number(m[3])} ${THAI_MONTHS[Number(m[2]) - 1]} ${m[1]}`;
+  const beYear = Number(m[1]) + 543;
+  return `${Number(m[3])} ${THAI_MONTHS[Number(m[2]) - 1]} ${beYear}`;
 }
 
 export interface Group {
@@ -198,9 +199,21 @@ export const fmtBaht = (n: number) => `฿${nf0.format(n)}`;
 export const fmtNum = (n: number) => nf0.format(n);
 export const fmtCompact = (n: number) => `฿${nfCompact.format(n)}`;
 
+/**
+ * Display-only helper: convert a 4-digit CE year (1900–2200) inside any string
+ * to Buddhist Era (+543). Internal filtering / sorting always stays in CE.
+ * Example: "19 ก.ย. 2025" → "19 ก.ย. 2568", "ก.ย. 2025" → "ก.ย. 2568"
+ */
+export function ceToBe(text: string): string {
+  return String(text).replace(/\d{4}/g, (y) => {
+    const n = Number(y);
+    return n >= 1900 && n <= 2200 ? String(n + 543) : y;
+  });
+}
+
 export function fmtDateTime(ts: number | null | undefined): string {
   if (!ts) return "—";
-  return new Date(ts).toLocaleString("en-GB", {
+  return new Date(ts).toLocaleString("en-GB-u-ca-buddhist", {
     day: "2-digit",
     month: "short",
     year: "numeric",

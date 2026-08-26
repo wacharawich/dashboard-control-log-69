@@ -7,7 +7,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { fmtBaht, fmtNum, type SheetRow } from "@/lib/sheet";
+import { ceToBe, fmtBaht, fmtNum, type SheetRow } from "@/lib/sheet";
 import { cn } from "@/lib/utils";
 import { ArrowDown, ArrowUp, ArrowUpDown, ChevronLeft, ChevronRight } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
@@ -152,7 +152,7 @@ export function DataTable({ rows }: { rows: SheetRow[] }) {
                     {row.regNo}
                   </TableCell>
                   <TableCell className="whitespace-nowrap text-[12px]">
-                    {row.date}
+                    {ceToBe(row.date)}
                   </TableCell>
                   <TableCell
                     className="max-w-[160px] truncate text-[12px]"

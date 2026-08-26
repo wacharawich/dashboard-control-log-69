@@ -1,6 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { useSheetData } from "@/hooks/use-sheet-data";
 import {
+  ceToBe,
   DIMENSIONS,
   fmtCompact,
   fmtDateTime,
@@ -285,7 +286,7 @@ function TerminalMock({ rows }: { rows: SheetRow[] }) {
                       {"█".repeat(bars)}
                       {"░".repeat(Math.max(0, BAR - bars))}
                     </span>
-                    <span className="ml-2 text-muted-foreground">{m.name}</span>
+                    <span className="ml-2 text-muted-foreground">{ceToBe(m.name)}</span>
                     <span className="ml-1.5 text-primary/90">{fmtCompact(m.sum)}</span>
                   </p>
                 );

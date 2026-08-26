@@ -12,6 +12,7 @@ import {
 import { useSheetData } from "@/hooks/use-sheet-data";
 import { exportCSV, exportPDF } from "@/lib/export";
 import {
+  ceToBe,
   DIMENSIONS,
   DIMENSION_MAP,
   filterRows,
@@ -324,7 +325,7 @@ export default function Dashboard() {
                   <span className="font-mono text-[9px] font-semibold tracking-wider">
                     {DIMENSION_MAP[key].code}
                   </span>
-                  <span className="max-w-[180px] truncate">{value}</span>
+                  <span className="max-w-[180px] truncate">{ceToBe(value)}</span>
                   <X className="size-3 opacity-60 group-hover:opacity-100" />
                 </button>
               )),
