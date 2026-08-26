@@ -9,7 +9,7 @@ import {
 } from "@/components/ui/table";
 import { ceToBe, fmtBaht, fmtNum, type SheetRow } from "@/lib/sheet";
 import { cn } from "@/lib/utils";
-import { ArrowDown, ArrowUp, ArrowUpDown, ChevronLeft, ChevronRight } from "lucide-react";
+import { ArrowDown, ArrowUp, ArrowUpDown, ChevronLeft, ChevronRight, Search, X } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 
 const PAGE_SIZE = 12;
@@ -59,8 +59,25 @@ function compareField(field: SortField, a: SheetRow, b: SheetRow, dir: SortDir):
   return dir === "asc" ? cmp : -cmp;
 }
 
+/** Case-insensitive match across every text column + ราคาเสนอ digits. */
+function matchesQuery(row: SheetRow, q: string): boolean {
+  return (
+    row.regNo.includes(q) ||
+    row.date.includes(q) ||
+    row.mission.includes(q) ||
+    row.workGroup.includes(q) ||
+    row.agency.includes(q) ||
+    row.item.includes(q) ||
+    row.category.includes(q) ||
+    row.type.includes(q) ||
+    row.planType.includes(q) ||
+    String(row.price).includes(q)
+  );
+}
+
 export function DataTable({ rows }: { rows: SheetRow[] }) {
   const [page, setPage] = useState(1);
+  const [query, setQuery] = useState("");
   const [sort, setSort] = useState<{ field: SortField; dir: SortDir }>({
     field: "price",
     dir: "desc",
@@ -73,16 +90,22 @@ export function DataTable({ rows }: { rows: SheetRow[] }) {
         : { field, dir: "asc" },
     );
 
-  // reset to first page when filtered dataset or sort column/direction changes
+  // reset to first page when filtered dataset, search query, or sort changes
   useEffect(() => {
     setPage(1);
-  }, [rows, sort]);
+  }, [rows, query, sort]);
+
+  const searched = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return rows;
+    return rows.filter((row) => matchesQuery(row, q));
+  }, [rows, query]);
 
   const sorted = useMemo(() => {
-    const copy = [...rows];
+    const copy = [...searched];
     copy.sort((a, b) => compareField(sort.field, a, b, sort.dir));
     return copy;
-  }, [rows, sort]);
+  }, [searched, sort]);
 
   const pageCount = Math.max(1, Math.ceil(sorted.length / PAGE_SIZE));
   const safePage = Math.min(page, pageCount);
@@ -91,10 +114,36 @@ export function DataTable({ rows }: { rows: SheetRow[] }) {
 
   return (
     <div className="flex flex-col gap-4">
-      <p className="font-mono text-[11px] text-muted-foreground">
-        rows <span className="text-primary">{fmtNum(sorted.length)}</span>{" "}
-        / {fmtNum(rows.length)} ผ่านตัวกรอง
-      </p>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <p className="font-mono text-[11px] text-muted-foreground">
+          rows <span className="text-primary">{fmtNum(sorted.length)}</span>{" "}
+          / {fmtNum(rows.length)} ผ่านตัวกรอง
+        </p>
+        <div className="relative w-full max-w-xs">
+          <Search className="pointer-events-none absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
+          <input
+            type="text"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="ค้นหาในตาราง…"
+            aria-label="ค้นหาในตาราง"
+            className={cn(
+              "h-8 w-full rounded-md border border-input bg-card pl-8 pr-7 font-mono text-[12px] text-foreground shadow-xs outline-none transition-colors placeholder:text-muted-foreground",
+              "focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/40",
+            )}
+          />
+          {query && (
+            <button
+              type="button"
+              onClick={() => setQuery("")}
+              aria-label="ล้างการค้นหา"
+              className="absolute right-1.5 top-1/2 -translate-y-1/2 rounded-sm p-0.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+            >
+              <X className="size-3.5" />
+            </button>
+          )}
+        </div>
+      </div>
 
       <div className="overflow-x-auto rounded-md border border-border bg-card">
         <Table className="min-w-[1080px]">
@@ -139,7 +188,7 @@ export function DataTable({ rows }: { rows: SheetRow[] }) {
                   colSpan={COLUMNS.length}
                   className="h-24 text-center text-[13px] text-muted-foreground"
                 >
-                  ไม่พบรายการที่ตรงกับตัวกรอง
+                  ไม่พบรายการที่ตรงกับ{query.trim() ? "การค้นหา" : "ตัวกรอง"}
                 </TableCell>
               </TableRow>
             ) : (
