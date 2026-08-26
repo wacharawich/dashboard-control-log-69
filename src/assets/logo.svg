@@ -1,51 +1,57 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 512 512" width="512" height="512">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
   <defs>
+    <path id="arcTop" d="M 41 256 A 215 215 0 0 1 471 256"/>
     <path id="arcBottom" d="M 56 256 A 200 200 0 0 0 456 256"/>
-    <path id="arcRight" d="M 383 383 A 180 180 0 0 0 383 129"/>
-    <path id="arcLeft" d="M 129 129 A 180 180 0 0 0 129 383"/>
-    <g id="person">
-      <circle cx="0" cy="-13" r="7"/>
-      <path d="M -9 -3 Q 0 -10 9 -3 L 7 15 L 2.5 15 L 2.5 3 L -2.5 3 L -2.5 15 L -7 15 Z"/>
-    </g>
   </defs>
 
-  <!-- badge -->
-  <circle cx="256" cy="256" r="250" fill="#ffffff"/>
-  <circle cx="256" cy="256" r="245" fill="none" stroke="#111111" stroke-width="8"/>
+  <!-- outer white disc with green rim -->
+  <circle cx="256" cy="256" r="254" fill="#ffffff"/>
+  <circle cx="256" cy="256" r="250" fill="none" stroke="#157a3c" stroke-width="5"/>
 
-  <!-- yellow crescent (right) -->
-  <path d="M 312 96 A 168 168 0 0 1 312 416 A 210 210 0 0 0 312 96 Z" fill="#ffd400"/>
-  <circle cx="336" cy="256" r="24" fill="#e6a800"/>
+  <!-- inner green disc -->
+  <circle cx="256" cy="256" r="182" fill="#157a3c"/>
 
-  <!-- green heart (left) -->
-  <path d="M 215 178 C 185 122 112 120 89 172 C 66 224 104 292 215 366 C 326 292 364 224 341 172 C 318 120 245 122 215 178 Z" fill="#4caf3e"/>
-  <circle cx="172" cy="222" r="24" fill="#1b5e20"/>
-  <circle cx="252" cy="222" r="24" fill="#1b5e20"/>
-
-  <!-- star of people (top) -->
-  <use xlink:href="#person" transform="translate(256,92)" fill="#4caf50"/>
-  <use xlink:href="#person" transform="translate(290,117) rotate(72)" fill="#2196f3"/>
-  <use xlink:href="#person" transform="translate(277,157) rotate(144)" fill="#f44336"/>
-  <use xlink:href="#person" transform="translate(235,157) rotate(216)" fill="#9c27b0"/>
-  <use xlink:href="#person" transform="translate(222,117) rotate(288)" fill="#ff9800"/>
-
-  <!-- caduceus -->
-  <path d="M 248 232 C 224 208 186 198 152 210 C 172 218 184 228 192 242 C 210 234 232 232 248 240 Z" fill="#4caf3e"/>
-  <path d="M 264 232 C 288 208 326 198 360 210 C 340 218 328 228 320 242 C 302 234 280 232 264 240 Z" fill="#4caf3e"/>
-  <rect x="251" y="205" width="10" height="140" rx="5" fill="#1565c0"/>
-  <path d="M 256 345 C 224 336 224 306 256 296 C 288 286 288 256 256 248" fill="none" stroke="#1e88e5" stroke-width="9" stroke-linecap="round"/>
-  <circle cx="256" cy="212" r="8" fill="#f9a825"/>
-  <path d="M 256 170 C 243 187 245 202 256 210 C 267 202 269 187 256 170 Z" fill="#e53935"/>
-
-  <!-- curved text -->
-  <text font-family="Prompt, 'Noto Sans Thai', sans-serif" font-size="44" font-weight="700" fill="#111111">
-    <textPath xlink:href="#arcBottom" href="#arcBottom" startOffset="50%" text-anchor="middle">โรงพยาบาลนางรอง</textPath>
+  <!-- curved text: Thai (top) -->
+  <text font-family="Prompt, 'Noto Sans Thai', sans-serif" font-size="42" font-weight="700" fill="#157a3c">
+    <textPath href="#arcTop" startOffset="50%" text-anchor="middle">กระทรวงสาธารณสุข</textPath>
   </text>
-  <text font-family="Prompt, sans-serif" font-size="19" font-weight="600" fill="#9e9e9e" letter-spacing="2">
-    <textPath xlink:href="#arcRight" href="#arcRight" startOffset="50%" text-anchor="middle">NANGRONG HOSPITAL</textPath>
+  <!-- curved text: English (bottom) -->
+  <text font-family="Prompt, Arial, sans-serif" font-size="30" font-weight="700" fill="#157a3c" letter-spacing="2">
+    <textPath href="#arcBottom" startOffset="50%" text-anchor="middle">MINISTRY OF PUBLIC HEALTH</textPath>
   </text>
-  <text font-family="Prompt, 'Noto Sans Thai', sans-serif" font-size="18" font-weight="600" fill="#2e7d32">
-    <textPath xlink:href="#arcLeft" href="#arcLeft" startOffset="50%" text-anchor="middle">บริการด้วยหัวใจ ได้คุณภาพ</textPath>
-  </text>
+
+  <!-- side leaf ornaments -->
+  <g fill="#157a3c">
+    <g transform="translate(40,256)">
+      <path d="M0,-18 C-8,-9 -8,9 0,18 C8,9 8,-9 0,-18 Z"/>
+      <path d="M-2,0 C-14,-4 -20,-12 -20,-20 C-10,-18 -4,-10 -2,0 Z"/>
+      <path d="M-2,0 C-14,4 -20,12 -20,20 C-10,18 -4,10 -2,0 Z"/>
+    </g>
+    <g transform="translate(472,256) scale(-1,1)">
+      <path d="M0,-18 C-8,-9 -8,9 0,18 C8,9 8,-9 0,-18 Z"/>
+      <path d="M-2,0 C-14,-4 -20,-12 -20,-20 C-10,-18 -4,-10 -2,0 Z"/>
+      <path d="M-2,0 C-14,4 -20,12 -20,20 C-10,18 -4,10 -2,0 Z"/>
+    </g>
+  </g>
+
+  <!-- caduceus (white on green) -->
+  <g fill="#ffffff">
+    <!-- flame -->
+    <path d="M 256 122 C 240 146 236 166 245 183 C 234 176 228 163 229 150 C 219 168 223 188 238 199 L 274 199 C 289 188 293 168 283 150 C 284 163 278 176 267 183 C 276 166 272 146 256 122 Z"/>
+    <!-- torch cup -->
+    <path d="M 238 199 L 274 199 L 267 218 L 245 218 Z"/>
+    <!-- wings -->
+    <path d="M 246 214 C 210 194 166 190 134 204 C 154 212 166 221 172 234 C 190 225 216 226 246 240 Z"/>
+    <path d="M 266 214 C 302 194 346 190 378 204 C 358 212 346 221 340 234 C 322 225 296 226 266 240 Z"/>
+    <!-- staff -->
+    <rect x="250" y="206" width="12" height="204" rx="6"/>
+    <path d="M 244 410 L 268 410 L 256 432 Z"/>
+    <!-- snake heads -->
+    <ellipse cx="272" cy="234" rx="10" ry="7"/>
+    <ellipse cx="240" cy="234" rx="10" ry="7"/>
+  </g>
+  <!-- snakes weaving around the staff -->
+  <path d="M 268 240 C 306 254 306 284 256 298 C 206 312 206 342 256 356 C 306 370 306 400 262 412" fill="none" stroke="#ffffff" stroke-width="10" stroke-linecap="round"/>
+  <path d="M 244 240 C 206 254 206 284 256 298 C 306 312 306 342 256 356 C 206 370 206 400 250 412" fill="none" stroke="#ffffff" stroke-width="10" stroke-linecap="round"/>
 </svg>
