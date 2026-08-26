@@ -15,6 +15,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { fmtBaht, fmtNum, type SheetRow } from "@/lib/sheet";
+import { cn } from "@/lib/utils";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 
@@ -30,9 +31,9 @@ const SORT_OPTIONS: { value: SortKey; label: string }[] = [
   { value: "agency", label: "หน่วยงาน (ก–ฮ)" },
 ];
 
-const COLUMNS = [
+const COLUMNS: { key: string; label: string; className?: string }[] = [
   { key: "regNo", label: "เลขทะเบียนคุม", className: "font-mono text-[11.5px]" },
-  { key: "date", label: "เดือน", className: "text-[12px] whitespace-nowrap" },
+  { key: "date", label: "เดือน", className: "text-[12px]" },
   { key: "mission", label: "กลุ่มภารกิจ" },
   { key: "workGroup", label: "กลุ่มงาน" },
   { key: "agency", label: "หน่วยงาน" },
@@ -41,13 +42,24 @@ const COLUMNS = [
   { key: "type", label: "ประเภท" },
   { key: "planType", label: "ประเภทแผน" },
   { key: "price", label: "ราคาเสนอ" },
-] as const;
+];
+
+/** Thai month names → sortable order */
+function monthOrderOf(date: string): number {
+  const m = date.match(/^(\d{1,2})\s+(\S+)\s+(\d{4})$/);
+  if (!m) return 0;
+  const idx = [
+    "ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย.",
+    "ก.ค.", "ส.ค.", "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค.",
+  ].indexOf(m[2]);
+  return Number(m[3]) * 100 + (idx >= 0 ? idx : 0);
+}
 
 export function DataTable({ rows }: { rows: SheetRow[] }) {
   const [page, setPage] = useState(1);
   const [sort, setSort] = useState<SortKey>("price-desc");
 
-  // reset to the first page whenever the filtered dataset changes
+  // reset page when filtered dataset changes
   useEffect(() => {
     setPage(1);
   }, [rows]);
@@ -103,13 +115,16 @@ export function DataTable({ rows }: { rows: SheetRow[] }) {
       </div>
 
       <div className="overflow-x-auto rounded-md border border-border bg-card">
-        <Table className="min-w-[1160px]">
+        <Table className="min-w-[1080px]">
           <TableHeader>
             <TableRow className="border-border/70 hover:bg-transparent">
               {COLUMNS.map((col) => (
                 <TableHead
                   key={col.key}
-                  className="bg-muted/40 font-mono text-[10px] font-semibold uppercase tracking-wider text-muted-foreground"
+                  className={cn(
+                    "bg-muted/40 font-mono text-[10px] font-semibold uppercase tracking-wider text-muted-foreground",
+                    col.className,
+                  )}
                 >
                   {col.label}
                 </TableHead>
@@ -119,35 +134,59 @@ export function DataTable({ rows }: { rows: SheetRow[] }) {
           <TableBody>
             {pageRows.length === 0 ? (
               <TableRow className="hover:bg-transparent">
-                <TableCell colSpan={COLUMNS.length} className="h-24 text-center text-[13px] text-muted-foreground">
+                <TableCell
+                  colSpan={COLUMNS.length}
+                  className="h-24 text-center text-[13px] text-muted-foreground"
+                >
                   ไม่พบรายการที่ตรงกับตัวกรอง
                 </TableCell>
               </TableRow>
             ) : (
               pageRows.map((row, i) => (
-                <TableRow key={`${row.regNo}-${i}`} className="border-border/50">
+                <TableRow
+                  key={`${row.regNo}-${i}`}
+                  className="border-border/50"
+                >
                   <TableCell className="whitespace-nowrap font-mono text-[11.5px] text-foreground/90">
                     {row.regNo}
                   </TableCell>
                   <TableCell className="whitespace-nowrap text-[12px]">
                     {row.date}
                   </TableCell>
-                  <TableCell className="max-w-[160px] truncate text-[12px]" title={row.mission}>
+                  <TableCell
+                    className="max-w-[160px] truncate text-[12px]"
+                    title={row.mission}
+                  >
                     {row.mission}
                   </TableCell>
-                  <TableCell className="max-w-[140px] truncate text-[12px]" title={row.workGroup}>
+                  <TableCell
+                    className="max-w-[140px] truncate text-[12px]"
+                    title={row.workGroup}
+                  >
                     {row.workGroup}
                   </TableCell>
-                  <TableCell className="max-w-[140px] truncate text-[12px]" title={row.agency}>
+                  <TableCell
+                    className="max-w-[140px] truncate text-[12px]"
+                    title={row.agency}
+                  >
                     {row.agency}
                   </TableCell>
-                  <TableCell className="max-w-[220px] truncate text-[12px]" title={row.item}>
+                  <TableCell
+                    className="max-w-[220px] truncate text-[12px]"
+                    title={row.item}
+                  >
                     {row.item}
                   </TableCell>
-                  <TableCell className="max-w-[150px] truncate text-[12px]" title={row.category}>
+                  <TableCell
+                    className="max-w-[150px] truncate text-[12px]"
+                    title={row.category}
+                  >
                     {row.category}
                   </TableCell>
-                  <TableCell className="max-w-[150px] truncate text-[12px]" title={row.type}>
+                  <TableCell
+                    className="max-w-[150px] truncate text-[12px]"
+                    title={row.type}
+                  >
                     {row.type}
                   </TableCell>
                   <TableCell className="whitespace-nowrap text-[12px]">
@@ -197,14 +236,4 @@ export function DataTable({ rows }: { rows: SheetRow[] }) {
       </div>
     </div>
   );
-}
-
-function monthOrderOf(date: string): number {
-  const m = date.match(/^(\d{1,2})\s+(\S+)\s+(\d{4})$/);
-  if (!m) return 0;
-  const idx = [
-    "ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย.",
-    "ก.ค.", "ส.ค.", "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค.",
-  ].indexOf(m[2]);
-  return Number(m[3]) * 100 + (idx >= 0 ? idx : 0);
 }
